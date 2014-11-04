@@ -1,6 +1,9 @@
 package router
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type RetrieveTree struct {
 	*Branch
@@ -8,14 +11,16 @@ type RetrieveTree struct {
 
 type Branch struct {
 	Static  map[string]*Branch
+	Name    string
 	Dynamic *Branch
-	Leaves  []string
+	Leaves  []Leaf
 }
 
 func NewTree() *RetrieveTree {
 	return &RetrieveTree{&Branch{}}
 }
-func (rt *RetrieveTree) Insert(path, item string) *Branch {
+
+func (rt *RetrieveTree) Insert(path string, item Leaf) *Branch {
 	if rt.Branch == nil {
 		rt.Branch = &Branch{}
 	}
@@ -23,92 +28,113 @@ func (rt *RetrieveTree) Insert(path, item string) *Branch {
 	return rt.Branch.Insert(path, item)
 }
 
-func (rt RetrieveTree) Retrieve(path string) []string {
+func (rt RetrieveTree) Retrieve(path string) ([]Leaf, map[string]string) {
 	if rt.Branch == nil {
-		return []string{}
+		return []Leaf{}, nil
 	}
 
 	splits := strings.Split(path, "/")
 	current := rt.Branch
+	params := map[string]string{}
 	for _, split := range splits {
 		if split == "" {
 			continue
 		}
 		if current.Static == nil && current.Dynamic == nil {
-			return []string{}
+			return []Leaf{}, nil
 		}
 
 		if br, ok := current.Static[split]; ok {
 			current = br
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
+			params[current.Name] = split
 		} else {
-			return []string{}
+			return []Leaf{}, nil
 		}
 	}
-	return current.Leaves
+	return current.Leaves, params
 }
 
-func (rt RetrieveTree) RetrieveWithFallback(path string) ([]string, []string) {
+func (rt RetrieveTree) RetrieveWithFallback(path string) ([]Leaf, []Leaf, map[string]string) {
+	params := map[string]string{}
 	if rt.Branch == nil {
-		return []string{}, []string{}
+		return []Leaf{}, []Leaf{}, params
 	}
 
 	splits := strings.Split(path, "/")
 	current := rt.Branch
-	var backtrack *Branch
+	backtrack := current.Dynamic
+
 	for _, split := range splits {
 		if split == "" {
 			continue
 		}
 		if current.Static == nil && current.Dynamic == nil && backtrack == nil {
-			return []string{}, []string{}
+			return []Leaf{}, []Leaf{}, params
 		}
 
 		if br, ok := current.Static[split]; ok {
 			current = br
 			if current.Dynamic != nil {
 				backtrack = current.Dynamic
+				params["backtrack_value"] = split
 			}
+
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
+			params[current.Name] = split
 			backtrack = nil
+			delete(params, "backtrack_value")
+
 		} else if backtrack != nil {
+			params[backtrack.Name] = params["backtrack_value"]
+			delete(params, "backtrack_value")
+
 			if br, ok := backtrack.Static[split]; ok {
 				current = br
 				if backtrack.Dynamic != nil {
 					backtrack = backtrack.Dynamic
+					params["backtrack_value"] = split
 				} else {
 					backtrack = nil
 				}
 			} else if backtrack.Dynamic != nil {
 				current = backtrack.Dynamic
 				backtrack = nil
+				delete(params, "backtrack_value")
+			} else {
+				return []Leaf{}, []Leaf{}, params
 			}
 		} else {
-			return []string{}, []string{}
+			return []Leaf{}, []Leaf{}, params
 		}
 	}
 	if backtrack != nil {
-		return current.Leaves, backtrack.Leaves
+		return current.Leaves, backtrack.Leaves, params
 	} else {
-		return current.Leaves, []string{}
+		return current.Leaves, []Leaf{}, params
 	}
 }
 
-func (b *Branch) Insert(path, item string) *Branch {
+func (b *Branch) Insert(path string, item Leaf) *Branch {
+	fmt.Println(path)
 	splits := strings.Split(path, "/")
 	current := b
+	if path == "" {
+		b.Leaves = append(b.Leaves, item)
+		return b
+	}
 	for _, split := range splits {
 		if split == "" {
 			continue
 		}
 		switch {
 		// Dynamic Option
-		case split == "*" && current.Dynamic == nil:
-			current.Dynamic = &Branch{}
+		case split[0] == ':' && current.Dynamic == nil:
+			current.Dynamic = &Branch{Name: split}
 			fallthrough
-		case split == "*":
+		case split[0] == ':':
 			current = current.Dynamic
 
 		// Static Option
@@ -125,4 +151,30 @@ func (b *Branch) Insert(path, item string) *Branch {
 	current.Leaves = append(current.Leaves, item)
 
 	return current
+}
+
+func (rt RetrieveTree) ListLeaves() []Leaf {
+	br := []*Branch{rt.Branch}
+	lf := []Leaf{}
+	for len(br) > 0 {
+		brz := br[0]
+		br = br[1:]
+		lf = append(lf, brz.Leaves...)
+		for _, branch := range brz.Static {
+			br = append(br, branch)
+		}
+		if brz.Dynamic != nil {
+			br = append(br, brz.Dynamic)
+		}
+	}
+	return lf
+}
+
+type Leaf struct {
+	Method   string
+	Name     string
+	Item     bool
+	Action   string
+	Ctrl     Controller
+	Callable func(Controller) error
 }

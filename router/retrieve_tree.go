@@ -1,9 +1,6 @@
 package router
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 type RetrieveTree struct {
 	*Branch
@@ -12,6 +9,7 @@ type RetrieveTree struct {
 type Branch struct {
 	Static  map[string]*Branch
 	Name    string
+	Path    string
 	Dynamic *Branch
 	Leaves  []Leaf
 }
@@ -80,7 +78,6 @@ func (rt RetrieveTree) RetrieveWithFallback(path string) ([]Leaf, []Leaf, map[st
 				backtrack = current.Dynamic
 				params["backtrack_value"] = split
 			}
-
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
 			params[current.Name] = split
@@ -116,13 +113,10 @@ func (rt RetrieveTree) RetrieveWithFallback(path string) ([]Leaf, []Leaf, map[st
 		return current.Leaves, []Leaf{}, params
 	}
 }
-
-func (b *Branch) Insert(path string, item Leaf) *Branch {
-	fmt.Println(path)
+func (b *Branch) InsertPath(path string) *Branch {
 	splits := strings.Split(path, "/")
 	current := b
 	if path == "" {
-		b.Leaves = append(b.Leaves, item)
 		return b
 	}
 	for _, split := range splits {
@@ -132,7 +126,7 @@ func (b *Branch) Insert(path string, item Leaf) *Branch {
 		switch {
 		// Dynamic Option
 		case split[0] == ':' && current.Dynamic == nil:
-			current.Dynamic = &Branch{Name: split}
+			current.Dynamic = &Branch{Name: split, Path: current.Path + "/" + split}
 			fallthrough
 		case split[0] == ':':
 			current = current.Dynamic
@@ -142,15 +136,19 @@ func (b *Branch) Insert(path string, item Leaf) *Branch {
 			current.Static = make(map[string]*Branch)
 			fallthrough
 		case current.Static[split] == nil:
-			current.Static[split] = &Branch{}
+			current.Static[split] = &Branch{Path: current.Path + "/" + split}
 			fallthrough
 		default:
 			current = current.Static[split]
 		}
 	}
-	current.Leaves = append(current.Leaves, item)
-
 	return current
+}
+func (b *Branch) Insert(path string, item Leaf) *Branch {
+	br := b.InsertPath(path)
+	item.Path = br.Path
+	br.Leaves = append(br.Leaves, item)
+	return br
 }
 
 func (rt RetrieveTree) ListLeaves() []Leaf {
@@ -175,6 +173,7 @@ type Leaf struct {
 	Name     string
 	Item     bool
 	Action   string
+	Path     string
 	Ctrl     Controller
 	Callable func(Controller) error
 }

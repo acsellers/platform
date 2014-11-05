@@ -26,18 +26,21 @@ func NewRouter() *Router {
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logBuffer := &bytes.Buffer{}
+	io.WriteString(logBuffer, "\n\n")
 	reqLog := log.New(logBuffer, "", log.Lmicroseconds)
 	defer io.Copy(r.LogOutput, logBuffer)
 
 	handlers, fallbacks, params := r.Tree.RetrieveWithFallback(req.URL.Path)
+	reqLog.Printf("%d Possible Handlers, %d Fallback Handlers", len(handlers), len(fallbacks))
 	if len(handlers) == 0 && len(fallbacks) == 0 {
-		fmt.Println("Bad Route", req.URL.Path)
+		reqLog.Println("Bad Route", req.URL.Path)
 		// r.BadRoute(w, req)
 		return
 	}
 
 	for _, handler := range append(handlers, fallbacks...) {
 		if handler.Method != req.Method {
+			reqLog.Printf("Skipping %s.%s due to incorrect method\n", ctrlName(handler.Ctrl), handler.Action)
 			continue
 		}
 		// prepare
@@ -102,6 +105,7 @@ func (r *Router) Namespace(name string) *SubRoute {
 type RouteDesc struct {
 	Name   string
 	Method string
+	Path   string
 }
 
 func (r *Router) RouteList() []RouteDesc {
@@ -111,6 +115,7 @@ func (r *Router) RouteList() []RouteDesc {
 		rds[i] = RouteDesc{
 			Name:   rl[i].Name,
 			Method: rl[i].Method,
+			Path:   rl[i].Path,
 		}
 	}
 
@@ -162,7 +167,8 @@ func (sr *SubRoute) One(ctrl Controller) *SubRoute {
 	sr.insertEdit(ctrl, name+"/edit", "edit_"+urlname+"_path", false)
 	sr.insertUpdate(ctrl, name, "update_"+urlname+"_path", false)
 	sr.insertDelete(ctrl, name, "delete_"+urlname+"_path", false)
-	return nil
+
+	return &SubRoute{local: sr.local.InsertPath(name)}
 }
 
 func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
@@ -181,18 +187,22 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 	sr.insertNew(ctrl, name+"/new", "new_"+urlname+"_path", false)
 	sr.insertCreate(ctrl, name, "create_"+urlname+"_path", false)
 	sr.insertIndex(ctrl, name, urlname+"_path", false)
-	return nil
+
+	return &SubRoute{local: sr.local.InsertPath(itemName)}
 }
 
 func (sr *SubRoute) Namespace(name string) *SubRoute {
-	return nil
+	if _, ok := sr.local.Static[name]; !ok {
+		sr.local.Static[name] = &Branch{}
+	}
+	return &SubRoute{local: sr.local.Static[name]}
 }
 
 func (sr *SubRoute) insertShow(ctrl Controller, name, urlname string, item bool) {
 	if sc, ok := ctrl.(showController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("Show", fmt.Sprint(sc.Show))
+			insert = !rc.resetFunc("Show", fmt.Sprint(sc.Show))
 		}
 		if insert {
 			sr.local.Insert(
@@ -244,7 +254,6 @@ func (sr *SubRoute) insertEdit(ctrl Controller, name, urlname string, item bool)
 
 func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item bool) {
 	if uc, ok := ctrl.(updateController); ok {
-		fmt.Println("found", name, urlname)
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
 			insert = rc.resetFunc("Update", fmt.Sprint(uc.Update))
@@ -267,8 +276,6 @@ func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item boo
 				},
 			)
 		}
-	} else {
-		fmt.Println(name, urlname)
 	}
 }
 
@@ -379,7 +386,7 @@ func (sr *SubRoute) insertIndex(ctrl Controller, name, urlname string, item bool
 			sr.local.Insert(
 				name,
 				Leaf{
-					Method: "POST",
+					Method: "GET",
 					Name:   urlname,
 					Ctrl:   ctrl,
 					Item:   item,

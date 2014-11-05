@@ -80,6 +80,14 @@ func (t t2Ctrl) Edit() error {
 	return nil
 }
 
+func (t t2Ctrl) Index() error {
+	return nil
+}
+
+func (t t2Ctrl) Show() error {
+	return nil
+}
+
 func (t t2Ctrl) Path() string {
 	return "bar"
 }
@@ -91,9 +99,10 @@ func (t t2Ctrl) Dupe() Controller {
 func TestRouter(t *testing.T) {
 	r := NewRouter()
 	r.One(t1Ctrl{})
-	r.Many(t2Ctrl{})
+	t2 := r.Many(t2Ctrl{})
+	t2.Many(t1Ctrl{})
 	rl := r.RouteList()
-	if len(rl) != 4 {
+	if len(rl) != 7 {
 		fmt.Println(r.RouteList())
 		t.Fatal("RouteList not correct")
 	}
@@ -107,5 +116,23 @@ func TestRouter(t *testing.T) {
 	if len(results) != 1 {
 		fmt.Println("Coundn't find edit bar handler", results)
 		t.Fatal("RouteList doesn't have bar edit")
+	}
+	results, _, _ = r.Tree.RetrieveWithFallback("/bar")
+	if len(results) != 2 {
+		fmt.Println("Coundn't find index + create bar handler", results)
+		t.Fatal("RouteList doesn't have bar index + create")
+	}
+
+	results, _ = r.Tree.Retrieve("/foo")
+	if len(results) != 1 {
+		fmt.Println("Coundn't find show foohandler", results)
+		t.Fatal("RouteList doesn't have foo show")
+
+	}
+
+	results, _ = r.Tree.Retrieve("/bar/123/foo/afafa")
+	if len(results) != 1 {
+		fmt.Println("Coundn't find show foohandler", results)
+		t.Fatal("RouteList doesn't have foo show")
 	}
 }

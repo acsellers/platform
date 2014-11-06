@@ -229,7 +229,7 @@ func (sr *SubRoute) insertEdit(ctrl Controller, name, urlname string, item bool)
 	if uc, ok := ctrl.(editController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("Edit", fmt.Sprint(uc.Edit))
+			insert = !rc.resetFunc("Edit", fmt.Sprint(uc.Edit))
 		}
 		if insert {
 			sr.local.Insert(
@@ -256,7 +256,7 @@ func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item boo
 	if uc, ok := ctrl.(updateController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("Update", fmt.Sprint(uc.Update))
+			insert = !rc.resetFunc("Update", fmt.Sprint(uc.Update))
 		}
 		if insert {
 			sr.local.Insert(
@@ -283,7 +283,7 @@ func (sr *SubRoute) insertNew(ctrl Controller, name, urlname string, item bool) 
 	if nc, ok := ctrl.(newController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("New", fmt.Sprint(nc.New))
+			insert = !rc.resetFunc("New", fmt.Sprint(nc.New))
 		}
 		if insert {
 			sr.local.Insert(
@@ -310,7 +310,7 @@ func (sr *SubRoute) insertCreate(ctrl Controller, name, urlname string, item boo
 	if cc, ok := ctrl.(createController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("Create", fmt.Sprint(cc.Create))
+			insert = !rc.resetFunc("Create", fmt.Sprint(cc.Create))
 		}
 		if insert {
 			sr.local.Insert(
@@ -337,7 +337,7 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 	if dc, ok := ctrl.(deleteController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("Delete", fmt.Sprint(dc.Delete))
+			insert = !rc.resetFunc("Delete", fmt.Sprint(dc.Delete))
 		}
 		if insert {
 			sr.local.Insert(
@@ -357,10 +357,10 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 				},
 			)
 			sr.local.Insert(
-				name,
+				name+"/delete",
 				Leaf{
 					Method: "POST",
-					Name:   urlname + "/delete",
+					Name:   urlname,
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Delete",
@@ -380,7 +380,7 @@ func (sr *SubRoute) insertIndex(ctrl Controller, name, urlname string, item bool
 	if ic, ok := ctrl.(indexController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
-			insert = rc.resetFunc("Index", fmt.Sprint(ic.Index))
+			insert = !rc.resetFunc("Index", fmt.Sprint(ic.Index))
 		}
 		if insert {
 			sr.local.Insert(

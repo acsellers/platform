@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Router struct {
@@ -29,6 +30,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(logBuffer, "\n\n")
 	reqLog := log.New(logBuffer, "", log.Lmicroseconds)
 	defer io.Copy(r.LogOutput, logBuffer)
+	now := time.Now()
+	defer reqLog.Printf("Completed request in %v\n", time.Since(now))
 
 	handlers, fallbacks, params := r.Tree.RetrieveWithFallback(req.URL.Path)
 	reqLog.Printf("%d Possible Handlers, %d Fallback Handlers", len(handlers), len(fallbacks))
@@ -192,10 +195,7 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 }
 
 func (sr *SubRoute) Namespace(name string) *SubRoute {
-	if _, ok := sr.local.Static[name]; !ok {
-		sr.local.Static[name] = &Branch{}
-	}
-	return &SubRoute{local: sr.local.Static[name]}
+	return &SubRoute{local: sr.local.InsertPath(name)}
 }
 
 func (sr *SubRoute) insertShow(ctrl Controller, name, urlname string, item bool) {

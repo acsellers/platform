@@ -36,7 +36,7 @@ func ctrlName(ctrl interface{}) string {
 	return reflect.TypeOf(ctrl).Name()
 }
 
-func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]string, lg *log.Logger) (Controller, error) {
+func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]string, lg *log.Logger) (Controller, Result) {
 	ctrl := l.Ctrl.Dupe()
 	ctrl.SetRequestData(w, r)
 	ctrl.SetParams(p)
@@ -44,23 +44,23 @@ func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]strin
 	name := ctrlName(ctrl)
 	lg.Printf("Starting request for %s using %s.%s\n", r.URL.String(), name, l.Action)
 	if pf, ok := ctrl.(interface {
-		PreFilter() error
+		PreFilter() Result
 	}); ok {
 		lg.Println("Running PreFilter")
-		err := pf.PreFilter()
-		if err != nil {
-			lg.Printf("PreFilter returned %s\n", err.Error())
-			return nil, err
+		res := pf.PreFilter()
+		if res != nil {
+			lg.Printf("PreFilter returned %s\n", res.String())
+			return nil, res
 		}
 	}
 	if pi, ok := ctrl.(interface {
-		PreItem() error
+		PreItem() Result
 	}); ok && l.Item {
 		lg.Println("Running PreItem")
-		err := pi.PreItem()
-		if err != nil {
-			lg.Printf("PreItem returned %s\n", err.Error())
-			return nil, err
+		res := pi.PreItem()
+		if res != nil {
+			lg.Printf("PreItem returned %s\n", res.String())
+			return nil, res
 		}
 	}
 

@@ -175,5 +175,5 @@ type Leaf struct {
 	Action   string
 	Path     string
 	Ctrl     Controller
-	Callable func(Controller) error
+	Callable func(Controller) Result
 }

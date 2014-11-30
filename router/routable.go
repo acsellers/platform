@@ -31,7 +31,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	reqLog := log.New(logBuffer, "", log.Lmicroseconds)
 	defer io.Copy(r.LogOutput, logBuffer)
 	now := time.Now()
-	defer reqLog.Printf("Completed request in %v\n", time.Since(now))
 
 	handlers, fallbacks, params := r.Tree.RetrieveWithFallback(req.URL.Path)
 	reqLog.Printf("%d Possible Handlers, %d Fallback Handlers", len(handlers), len(fallbacks))
@@ -47,47 +46,22 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			continue
 		}
 		// prepare
-		ctrl, err := callCtrl(w, req, handler, params, reqLog)
-		if err != nil {
-			if _, ok := err.(NotApplicable); ok {
+		ctrl, res := callCtrl(w, req, handler, params, reqLog)
+		if res != nil {
+			if _, ok := res.(NotFound); ok {
 				reqLog.Println("Aborting current handler, starting next handler")
 				continue
 			}
-			if re, ok := err.(RedirectError); ok {
-				reqLog.Println(err)
-				re.Redirect(w, req)
-				return
-			}
-			if r.OnError != nil {
-				reqLog.Printf("Encountered error: %s\n", err.Error())
-				r.OnError(err, w, req, ctrl)
-			} else {
-				reqLog.Printf("Encountered unknown error (%s) with no OnError handler\n", err.Error())
-				return
-			}
-		}
-		err = handler.Callable(ctrl)
-		if err == nil {
+			res.Execute(w)
 			return
 		}
-		if re, ok := err.(RedirectError); ok {
-			reqLog.Println(err)
-			re.Redirect(w, req)
+		res = handler.Callable(ctrl)
+		if res == nil {
 			return
 		}
-		if _, ok := err.(NotApplicable); ok {
-			reqLog.Println("Aborting current handler, starting next handler")
-			continue
-		}
-		if r.OnError != nil {
-			reqLog.Printf("Encountered error: %s\n", err.Error())
-			r.OnError(err, w, req, ctrl)
-			return
-		} else {
-			reqLog.Printf("Encountered unknown error (%s) with no OnError handler\n", err.Error())
-			return
-		}
+		res.Execute(w)
 	}
+	reqLog.Printf("Completed request in %v\n", time.Since(now))
 }
 
 func (r *Router) One(ctrl Controller) *SubRoute {
@@ -131,29 +105,29 @@ type SubRoute struct {
 }
 
 type showController interface {
-	Show() error
+	Show() Result
 }
 type editController interface {
-	Edit() error
+	Edit() Result
 }
 type updateController interface {
-	Update() error
+	Update() Result
 }
 type deleteController interface {
-	Delete() error
+	Delete() Result
 }
 type memberController interface {
 	Member() map[string]Member
 }
 
 type newController interface {
-	New() error
+	New() Result
 }
 type createController interface {
-	Create() error
+	Create() Result
 }
 type indexController interface {
-	Index() error
+	Index() Result
 }
 type collectionController interface {
 	Collection() map[string]Collection
@@ -213,11 +187,11 @@ func (sr *SubRoute) insertShow(ctrl Controller, name, urlname string, item bool)
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Show",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if sc, ok := ctrl.(showController); ok {
 							return sc.Show()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Show method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Show method")}
 					},
 				},
 			)
@@ -240,11 +214,11 @@ func (sr *SubRoute) insertEdit(ctrl Controller, name, urlname string, item bool)
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Edit",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if uc, ok := ctrl.(editController); ok {
 							return uc.Edit()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Edit method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Edit method")}
 					},
 				},
 			)
@@ -267,11 +241,11 @@ func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item boo
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Update",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if uc, ok := ctrl.(updateController); ok {
 							return uc.Update()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Update method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Update method")}
 					},
 				},
 			)
@@ -294,11 +268,11 @@ func (sr *SubRoute) insertNew(ctrl Controller, name, urlname string, item bool) 
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "New",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if nc, ok := ctrl.(newController); ok {
 							return nc.New()
 						}
-						return fmt.Errorf("BUG: controller passed is missing New method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing New method")}
 					},
 				},
 			)
@@ -321,11 +295,11 @@ func (sr *SubRoute) insertCreate(ctrl Controller, name, urlname string, item boo
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Create",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if cc, ok := ctrl.(createController); ok {
 							return cc.Create()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Create method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Create method")}
 					},
 				},
 			)
@@ -348,11 +322,11 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Delete",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if dc, ok := ctrl.(deleteController); ok {
 							return dc.Delete()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Delete method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Delete method")}
 					},
 				},
 			)
@@ -364,11 +338,11 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Delete",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if dc, ok := ctrl.(deleteController); ok {
 							return dc.Delete()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Delete method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Delete method")}
 					},
 				},
 			)
@@ -391,11 +365,11 @@ func (sr *SubRoute) insertIndex(ctrl Controller, name, urlname string, item bool
 					Ctrl:   ctrl,
 					Item:   item,
 					Action: "Index",
-					Callable: func(ctrl Controller) error {
+					Callable: func(ctrl Controller) Result {
 						if ic, ok := ctrl.(indexController); ok {
 							return ic.Index()
 						}
-						return fmt.Errorf("BUG: controller passed is missing Index method")
+						return InternalError{fmt.Errorf("BUG: controller passed is missing Index method")}
 					},
 				},
 			)

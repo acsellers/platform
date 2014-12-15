@@ -62,9 +62,9 @@ func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]strin
 }
 
 type BaseController struct {
-	Out     http.ResponseWriter
-	Request *http.Request
-	Log     *log.Logger
+	Out     http.ResponseWriter `dupe:"no"`
+	Request *http.Request       `dupe:"no"`
+	Log     *log.Logger         `dupe:"no"`
 	// The Cache is shared between all Controllers
 	Cache map[string]interface{}
 	// The Context will be a new map each request
@@ -115,9 +115,58 @@ func (adc autoDupeCtrl) Dupe() Controller {
 	rt := reflect.TypeOf(adc.Controller)
 	rn := reflect.New(rt)
 	for i := 0; i < rt.NumField(); i++ {
-		rn.Elem().Field(i).Set(rs.Field(i))
+		switch rn.Elem().Field(i).Kind() {
+		case reflect.Struct:
+			if rt.Field(i).Tag.Get("dupe") != "no" {
+				reflectDupe(rs.Field(i), rn.Elem().Field(i).Addr())
+			} else {
+				rn.Elem().Field(i).Set(rs.Field(i))
+			}
+		case reflect.Ptr:
+			if rt.Field(i).Type.Elem().Kind() == reflect.Struct {
+				if rt.Field(i).Tag.Get("dupe") != "no" {
+					ov := reflect.New(rt.Field(i).Type.Elem())
+					reflectDupe(rs.Field(i).Elem(), ov)
+					rn.Elem().Field(i).Set(ov)
+				} else {
+					rn.Elem().Field(i).Set(rs.Field(i))
+				}
+			} else {
+				rn.Elem().Field(i).Set(rs.Field(i))
+			}
+		default:
+			rn.Elem().Field(i).Set(rs.Field(i))
+		}
 	}
 	return rn.Interface().(Controller)
+}
+
+func reflectDupe(sv, ov reflect.Value) {
+	rt := sv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		switch sv.Field(i).Kind() {
+		case reflect.Struct:
+			if rt.Field(i).Tag.Get("dupe") != "no" {
+				reflectDupe(sv.Field(i), ov.Elem().Field(i).Addr())
+			} else {
+				ov.Elem().Field(i).Set(sv.Field(i))
+			}
+		case reflect.Ptr:
+			if rt.Field(i).Type.Elem().Kind() == reflect.Struct {
+				if rt.Field(i).Tag.Get("dupe") != "no" {
+					oov := reflect.New(rt.Field(i).Type.Elem())
+					reflectDupe(sv.Field(i).Elem(), oov)
+					ov.Elem().Field(i).Set(oov)
+				} else {
+					ov.Elem().Field(i).Set(sv.Field(i))
+				}
+			} else {
+				ov.Elem().Field(i).Set(sv.Field(i))
+			}
+		default:
+			ov.Elem().Field(i).Set(sv.Field(i))
+		}
+	}
 }
 
 // RestfulController lists all the possible functions

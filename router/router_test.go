@@ -51,14 +51,26 @@ func TestRetrieveTree(t *testing.T) {
 
 type t1Ctrl struct {
 	*BaseController
+	Custom string
 }
 
 func (t t1Ctrl) Show() Result {
 	return nil
 }
 
+func (t t1Ctrl) Get(attr string) string {
+	return fmt.Sprint(t.Context[attr])
+}
+
 func (t t1Ctrl) Path() string {
+	if t.Custom != "" {
+		return t.Custom
+	}
 	return "foo"
+}
+
+type t3Ctrl struct {
+	t1Ctrl
 }
 
 type t2Ctrl struct {
@@ -126,4 +138,93 @@ func TestRouter(t *testing.T) {
 		fmt.Println("Coundn't find show foohandler", results)
 		t.Fatal("RouteList doesn't have foo show")
 	}
+}
+func TestDupingBasic(t *testing.T) {
+	tc := t1Ctrl{&BaseController{}, "asdf"}
+	dt := autoDupeCtrl{tc}
+
+	d1 := dt.Dupe()
+	d2 := dt.Dupe()
+	if d1.Path() != d2.Path() || d1.Path() != tc.Path() {
+		t.Fatal("Bad things")
+	}
+	ctx := map[string]interface{}{
+		"andrew": "sellers",
+	}
+	if cc, ok := d1.(interface {
+		SetContext(map[string]interface{})
+	}); ok {
+		cc.SetContext(ctx)
+	}
+
+	ctx2 := map[string]interface{}{
+		"andrew": "blah",
+	}
+	if cc, ok := d2.(interface {
+		SetContext(map[string]interface{})
+	}); ok {
+		cc.SetContext(ctx2)
+	}
+
+	if gc, ok := d1.(interface {
+		Get(string) string
+	}); ok {
+		if gc.Get("andrew") != "sellers" {
+			t.Fatal("incorrect context")
+		}
+	}
+
+	if gc, ok := d2.(interface {
+		Get(string) string
+	}); ok {
+		if gc.Get("andrew") == "sellers" {
+			t.Fatal("incorrect context")
+		}
+	}
+
+}
+
+func TestDupingNested(t *testing.T) {
+	tc := t3Ctrl{t1Ctrl{&BaseController{}, "asdf"}}
+	dt := autoDupeCtrl{tc}
+
+	d1 := dt.Dupe()
+	d2 := dt.Dupe()
+	if d1.Path() != d2.Path() || d1.Path() != tc.Path() {
+		t.Fatal("Bad things")
+	}
+	ctx := map[string]interface{}{
+		"andrew": "sellers",
+	}
+	if cc, ok := d1.(interface {
+		SetContext(map[string]interface{})
+	}); ok {
+		cc.SetContext(ctx)
+	}
+
+	ctx2 := map[string]interface{}{
+		"andrew": "blah",
+	}
+	if cc, ok := d2.(interface {
+		SetContext(map[string]interface{})
+	}); ok {
+		cc.SetContext(ctx2)
+	}
+
+	if gc, ok := d1.(interface {
+		Get(string) string
+	}); ok {
+		if gc.Get("andrew") != "sellers" {
+			t.Fatal("incorrect context")
+		}
+	}
+
+	if gc, ok := d2.(interface {
+		Get(string) string
+	}); ok {
+		if gc.Get("andrew") == "sellers" {
+			t.Fatal("incorrect context")
+		}
+	}
+
 }

@@ -174,6 +174,6 @@ type Leaf struct {
 	Item     bool
 	Action   string
 	Path     string
-	Ctrl     Controller
+	Ctrl     DupableController
 	Callable func(Controller) Result
 }

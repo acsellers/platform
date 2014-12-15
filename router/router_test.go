@@ -53,7 +53,7 @@ type t1Ctrl struct {
 	*BaseController
 }
 
-func (t t1Ctrl) Show() error {
+func (t t1Ctrl) Show() Result {
 	return nil
 }
 
@@ -61,39 +61,31 @@ func (t t1Ctrl) Path() string {
 	return "foo"
 }
 
-func (t t1Ctrl) Dupe() Controller {
-	return t1Ctrl{&BaseController{}}
-}
-
 type t2Ctrl struct {
 	*BaseController
 }
 
-func (t t2Ctrl) New() error {
+func (t t2Ctrl) New() Result {
 	return nil
 }
-func (t t2Ctrl) Create() error {
-	return nil
-}
-
-func (t t2Ctrl) Edit() error {
+func (t t2Ctrl) Create() Result {
 	return nil
 }
 
-func (t t2Ctrl) Index() error {
+func (t t2Ctrl) Edit() Result {
 	return nil
 }
 
-func (t t2Ctrl) Show() error {
+func (t t2Ctrl) Index() Result {
+	return nil
+}
+
+func (t t2Ctrl) Show() Result {
 	return nil
 }
 
 func (t t2Ctrl) Path() string {
 	return "bar"
-}
-
-func (t t2Ctrl) Dupe() Controller {
-	return t2Ctrl{&BaseController{}}
 }
 
 func TestRouter(t *testing.T) {
@@ -103,8 +95,7 @@ func TestRouter(t *testing.T) {
 	t2.Many(t1Ctrl{})
 	rl := r.RouteList()
 	if len(rl) != 7 {
-		fmt.Println(r.RouteList())
-		t.Fatal("RouteList not correct")
+		t.Fatal("RouteList not correct:", r.RouteList())
 	}
 	results, _ := r.Tree.Retrieve("/bar/new")
 	if len(results) != 1 {

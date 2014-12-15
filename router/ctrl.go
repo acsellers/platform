@@ -7,12 +7,6 @@ import (
 	"reflect"
 )
 
-type NotApplicable struct{}
-
-func (na NotApplicable) Error() string {
-	return "Request Not Applicable"
-}
-
 // RedirectError may be returned by PreFilter, PreItem or any
 // Restful function and is intended for use for authentication
 // checks or permission checks.
@@ -105,7 +99,25 @@ type Controller interface {
 	SetRequestData(http.ResponseWriter, *http.Request)
 	SetParams(map[string]string)
 	SetLogger(*log.Logger)
+}
+
+type DupableController interface {
+	Controller
 	Dupe() Controller
+}
+
+type autoDupeCtrl struct {
+	Controller
+}
+
+func (adc autoDupeCtrl) Dupe() Controller {
+	rs := reflect.ValueOf(adc.Controller)
+	rt := reflect.TypeOf(adc.Controller)
+	rn := reflect.New(rt)
+	for i := 0; i < rt.NumField(); i++ {
+		rn.Elem().Field(i).Set(rs.Field(i))
+	}
+	return rn.Interface().(Controller)
 }
 
 // RestfulController lists all the possible functions
@@ -115,67 +127,54 @@ type Controller interface {
 // Controller, which are handled by BaseController.
 type RestfulController interface {
 	// Run before all requests if present
-	PreFilter() error
+	PreFilter() Result
 	// Run before requests with an item if present
-	PreItem() error
+	PreItem() Result
 
 	// SingleCtrl & MultiCtrl
-	Show() error
-	Edit() error
-	Update() error
-	Delete() error
+	Show() Result
+	Edit() Result
+	Update() Result
+	Delete() Result
 
 	// MultiCtrl only
-	New() error
-	Create() error
-	Index() error
-
-	// Non-Restful Routes
-	Member() map[string]Member
-	// Collection is only mapped on Many Controllers
-	Collection() map[string]Collection
+	New() Result
+	Create() Result
+	Index() Result
 }
 
 type ResetController struct{}
 
 // SingleCtrl & MultiCtrl
-func (r ResetController) Show() error {
-	return NotApplicable{}
+func (r ResetController) Show() Result {
+	return NotFound{}
 }
-func (r ResetController) Edit() error {
-	return NotApplicable{}
+func (r ResetController) Edit() Result {
+	return NotFound{}
 }
-func (r ResetController) Update() error {
-	return NotApplicable{}
+func (r ResetController) Update() Result {
+	return NotFound{}
 }
-func (r ResetController) Delete() error {
-	return NotApplicable{}
+func (r ResetController) Delete() Result {
+	return NotFound{}
 }
 
 // MultiCtrl only
-func (r ResetController) New() error {
-	return NotApplicable{}
+func (r ResetController) New() Result {
+	return NotFound{}
 }
-func (r ResetController) Create() error {
-	return NotApplicable{}
+func (r ResetController) Create() Result {
+	return NotFound{}
 }
-func (r ResetController) Index() error {
-	return NotApplicable{}
-}
-
-// Non-Restful Routes
-func (r ResetController) Member() map[string]Member {
-	return nil
-}
-func (r ResetController) Collection() map[string]Collection {
-	return nil
+func (r ResetController) Index() Result {
+	return NotFound{}
 }
 
 type beenReset interface {
 	resetFunc(string, string) bool
 }
 
-// Secret Function to be awesome
+// The reason resetController works, kind of a hack around func == func
 func (r ResetController) resetFunc(name, fp string) bool {
 	switch name {
 	case "Show":
@@ -194,16 +193,4 @@ func (r ResetController) resetFunc(name, fp string) bool {
 		return fp == fmt.Sprint(r.Index)
 	}
 	return false
-}
-
-type Member struct {
-	Methods  []string
-	Path     string
-	Callable func(Controller) error
-}
-
-type Collection struct {
-	Methods  []string
-	Path     string
-	Callable func(Controller) error
 }

@@ -116,10 +116,6 @@ type updateController interface {
 type deleteController interface {
 	Delete() Result
 }
-type memberController interface {
-	Member() map[string]Member
-}
-
 type newController interface {
 	New() Result
 }
@@ -129,26 +125,34 @@ type createController interface {
 type indexController interface {
 	Index() Result
 }
-type collectionController interface {
-	Collection() map[string]Collection
-}
 
 func (sr *SubRoute) One(ctrl Controller) *SubRoute {
+	var dc DupableController
+	var ok bool
+	if dc, ok = ctrl.(DupableController); !ok {
+		dc = autoDupeCtrl{ctrl}
+	}
+
 	name := ctrl.Path()
 	urlname := name
 	if len(sr.name) > 0 {
 		urlname = name + "_" + sr.name
 	}
 
-	sr.insertShow(ctrl, name, urlname+"_path", false)
-	sr.insertEdit(ctrl, name+"/edit", "edit_"+urlname+"_path", false)
-	sr.insertUpdate(ctrl, name, "update_"+urlname+"_path", false)
-	sr.insertDelete(ctrl, name, "delete_"+urlname+"_path", false)
+	sr.insertShow(dc, ctrl, name, urlname+"_path", false)
+	sr.insertEdit(dc, ctrl, name+"/edit", "edit_"+urlname+"_path", false)
+	sr.insertUpdate(dc, ctrl, name, "update_"+urlname+"_path", false)
+	sr.insertDelete(dc, ctrl, name, "delete_"+urlname+"_path", false)
 
 	return &SubRoute{local: sr.local.InsertPath(name)}
 }
 
 func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
+	var dc DupableController
+	var ok bool
+	if dc, ok = ctrl.(DupableController); !ok {
+		dc = autoDupeCtrl{ctrl}
+	}
 	name := ctrl.Path()
 	itemName := fmt.Sprintf("%[1]s/:%[1]sid", name)
 	urlname := name
@@ -156,14 +160,14 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 		urlname = name + "_" + sr.name
 	}
 
-	sr.insertShow(ctrl, itemName, "show_"+urlname+"_path", true)
-	sr.insertEdit(ctrl, itemName+"/edit", "edit_"+urlname+"_path", true)
-	sr.insertUpdate(ctrl, itemName, "update_"+urlname+"_path", true)
-	sr.insertDelete(ctrl, itemName, "delete_"+urlname+"_path", true)
+	sr.insertShow(dc, ctrl, itemName, "show_"+urlname+"_path", true)
+	sr.insertEdit(dc, ctrl, itemName+"/edit", "edit_"+urlname+"_path", true)
+	sr.insertUpdate(dc, ctrl, itemName, "update_"+urlname+"_path", true)
+	sr.insertDelete(dc, ctrl, itemName, "delete_"+urlname+"_path", true)
 
-	sr.insertNew(ctrl, name+"/new", "new_"+urlname+"_path", false)
-	sr.insertCreate(ctrl, name, "create_"+urlname+"_path", false)
-	sr.insertIndex(ctrl, name, urlname+"_path", false)
+	sr.insertNew(dc, ctrl, name+"/new", "new_"+urlname+"_path", false)
+	sr.insertCreate(dc, ctrl, name, "create_"+urlname+"_path", false)
+	sr.insertIndex(dc, ctrl, name, urlname+"_path", false)
 
 	return &SubRoute{local: sr.local.InsertPath(itemName)}
 }
@@ -172,7 +176,7 @@ func (sr *SubRoute) Namespace(name string) *SubRoute {
 	return &SubRoute{local: sr.local.InsertPath(name)}
 }
 
-func (sr *SubRoute) insertShow(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertShow(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if sc, ok := ctrl.(showController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -184,7 +188,7 @@ func (sr *SubRoute) insertShow(ctrl Controller, name, urlname string, item bool)
 				Leaf{
 					Method: "GET",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Show",
 					Callable: func(ctrl Controller) Result {
@@ -199,7 +203,7 @@ func (sr *SubRoute) insertShow(ctrl Controller, name, urlname string, item bool)
 	}
 }
 
-func (sr *SubRoute) insertEdit(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertEdit(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if uc, ok := ctrl.(editController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -211,7 +215,7 @@ func (sr *SubRoute) insertEdit(ctrl Controller, name, urlname string, item bool)
 				Leaf{
 					Method: "GET",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Edit",
 					Callable: func(ctrl Controller) Result {
@@ -226,7 +230,7 @@ func (sr *SubRoute) insertEdit(ctrl Controller, name, urlname string, item bool)
 	}
 }
 
-func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertUpdate(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if uc, ok := ctrl.(updateController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -238,7 +242,7 @@ func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item boo
 				Leaf{
 					Method: "POST",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Update",
 					Callable: func(ctrl Controller) Result {
@@ -253,7 +257,7 @@ func (sr *SubRoute) insertUpdate(ctrl Controller, name, urlname string, item boo
 	}
 }
 
-func (sr *SubRoute) insertNew(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertNew(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if nc, ok := ctrl.(newController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -265,7 +269,7 @@ func (sr *SubRoute) insertNew(ctrl Controller, name, urlname string, item bool) 
 				Leaf{
 					Method: "GET",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "New",
 					Callable: func(ctrl Controller) Result {
@@ -280,7 +284,7 @@ func (sr *SubRoute) insertNew(ctrl Controller, name, urlname string, item bool) 
 	}
 }
 
-func (sr *SubRoute) insertCreate(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertCreate(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if cc, ok := ctrl.(createController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -292,7 +296,7 @@ func (sr *SubRoute) insertCreate(ctrl Controller, name, urlname string, item boo
 				Leaf{
 					Method: "POST",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Create",
 					Callable: func(ctrl Controller) Result {
@@ -307,7 +311,7 @@ func (sr *SubRoute) insertCreate(ctrl Controller, name, urlname string, item boo
 	}
 }
 
-func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertDelete(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if dc, ok := ctrl.(deleteController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -319,7 +323,7 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 				Leaf{
 					Method: "DELETE",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Delete",
 					Callable: func(ctrl Controller) Result {
@@ -335,7 +339,7 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 				Leaf{
 					Method: "POST",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Delete",
 					Callable: func(ctrl Controller) Result {
@@ -350,7 +354,7 @@ func (sr *SubRoute) insertDelete(ctrl Controller, name, urlname string, item boo
 	}
 }
 
-func (sr *SubRoute) insertIndex(ctrl Controller, name, urlname string, item bool) {
+func (sr *SubRoute) insertIndex(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if ic, ok := ctrl.(indexController); ok {
 		insert := true
 		if rc, ok := ctrl.(beenReset); ok {
@@ -362,7 +366,7 @@ func (sr *SubRoute) insertIndex(ctrl Controller, name, urlname string, item bool
 				Leaf{
 					Method: "GET",
 					Name:   urlname,
-					Ctrl:   ctrl,
+					Ctrl:   dctrl,
 					Item:   item,
 					Action: "Index",
 					Callable: func(ctrl Controller) Result {

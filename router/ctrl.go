@@ -37,24 +37,31 @@ func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]strin
 	ctrl.SetLogger(lg)
 	name := ctrlName(ctrl)
 	lg.Printf("Starting request for %s using %s.%s\n", r.URL.String(), name, l.Action)
-	if pf, ok := ctrl.(interface {
-		PreFilter() Result
-	}); ok {
-		lg.Println("Running PreFilter")
-		res := pf.PreFilter()
-		if res != nil {
-			lg.Printf("PreFilter returned %s\n", res.String())
-			return nil, res
+	if l.SetContext {
+		if sc, ok := ctrl.(contexter); ok {
+			sc.SetContext(map[string]interface{}{})
+		}
+	} else {
+		fmt.Println("No SetContext")
+	}
+	if l.PreFilter {
+		if pf, ok := ctrl.(prefilter); ok {
+			lg.Println("Running PreFilter")
+			res := pf.PreFilter()
+			if res != nil {
+				lg.Printf("PreFilter returned %s\n", res.String())
+				return nil, res
+			}
 		}
 	}
-	if pi, ok := ctrl.(interface {
-		PreItem() Result
-	}); ok && l.Item {
-		lg.Println("Running PreItem")
-		res := pi.PreItem()
-		if res != nil {
-			lg.Printf("PreItem returned %s\n", res.String())
-			return nil, res
+	if l.PreItem && l.Item {
+		if pi, ok := ctrl.(preitem); ok {
+			lg.Println("Running PreItem")
+			res := pi.PreItem()
+			if res != nil {
+				lg.Printf("PreItem returned %s\n", res.String())
+				return nil, res
+			}
 		}
 	}
 

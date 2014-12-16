@@ -53,6 +53,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				continue
 			}
 			res.Execute(w)
+			reqLog.Println(res)
 			return
 		}
 		res = handler.Callable(ctrl)
@@ -60,6 +61,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		res.Execute(w)
+		reqLog.Println(res)
 	}
 	reqLog.Printf("Completed request in %v\n", time.Since(now))
 }

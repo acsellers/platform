@@ -75,6 +75,7 @@ type InternalError struct {
 }
 
 func (ie InternalError) Execute(w http.ResponseWriter) {
+	io.WriteString(w, "<h1>Internal Server Error</h1>")
 }
 
 func (ie InternalError) String() string {

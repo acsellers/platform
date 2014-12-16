@@ -144,8 +144,29 @@ func (b *Branch) InsertPath(path string) *Branch {
 	}
 	return current
 }
+
+type contexter interface {
+	SetContext(map[string]interface{})
+}
+
+type prefilter interface {
+	PreFilter() Result
+}
+
+type preitem interface {
+	PreItem() Result
+}
+
 func (b *Branch) Insert(path string, item Leaf) *Branch {
 	br := b.InsertPath(path)
+	dc := item.Ctrl.Dupe()
+	_, scok := dc.(contexter)
+	item.SetContext = scok
+	_, pfok := dc.(prefilter)
+	item.PreFilter = pfok
+	_, piok := dc.(preitem)
+	item.PreFilter = piok
+
 	item.Path = br.Path
 	br.Leaves = append(br.Leaves, item)
 	return br
@@ -169,11 +190,13 @@ func (rt RetrieveTree) ListLeaves() []Leaf {
 }
 
 type Leaf struct {
-	Method   string
-	Name     string
-	Item     bool
-	Action   string
-	Path     string
-	Ctrl     DupableController
-	Callable func(Controller) Result
+	Method               string
+	Name                 string
+	Item                 bool
+	Action               string
+	Path                 string
+	Ctrl                 DupableController
+	Callable             func(Controller) Result
+	SetContext, SetCache bool
+	PreFilter, PreItem   bool
 }

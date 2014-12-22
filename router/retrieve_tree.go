@@ -165,7 +165,7 @@ func (b *Branch) Insert(path string, item Leaf) *Branch {
 	_, pfok := dc.(prefilter)
 	item.PreFilter = pfok
 	_, piok := dc.(preitem)
-	item.PreFilter = piok
+	item.PreItem = piok
 
 	item.Path = br.Path
 	br.Leaves = append(br.Leaves, item)

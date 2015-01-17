@@ -149,6 +149,9 @@ func (adc autoDupeCtrl) Dupe() Controller {
 }
 
 func reflectDupe(sv, ov reflect.Value) {
+	if !sv.IsValid() {
+		return
+	}
 	rt := sv.Type()
 	for i := 0; i < rt.NumField(); i++ {
 		switch sv.Field(i).Kind() {

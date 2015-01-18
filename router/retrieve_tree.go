@@ -159,13 +159,15 @@ type preitem interface {
 
 func (b *Branch) Insert(path string, item Leaf) *Branch {
 	br := b.InsertPath(path)
-	dc := item.Ctrl.Dupe()
-	_, scok := dc.(contexter)
-	item.SetContext = scok
-	_, pfok := dc.(prefilter)
-	item.PreFilter = pfok
-	_, piok := dc.(preitem)
-	item.PreItem = piok
+	if item.Ctrl != nil {
+		dc := item.Ctrl.Dupe()
+		_, scok := dc.(contexter)
+		item.SetContext = scok
+		_, pfok := dc.(prefilter)
+		item.PreFilter = pfok
+		_, piok := dc.(preitem)
+		item.PreItem = piok
+	}
 
 	item.Path = br.Path
 	br.Leaves = append(br.Leaves, item)

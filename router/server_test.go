@@ -1,6 +1,7 @@
 package router
 
 import (
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,12 @@ func (r restCtrl) Show() Result {
 		Content: strings.NewReader("Show: " + r.Params[":"+r.Loc+"id"]),
 	}
 }
+func (r restCtrl) OtherItem(sr *SubRoute) {
+	sr.Get("asdf").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "asdf")
+	})
+}
+
 func TestRestControllers(t *testing.T) {
 	r := NewRouter()
 	r.LogOutput = ioutil.Discard
@@ -53,6 +60,16 @@ func TestRestControllers(t *testing.T) {
 	body, err = ioutil.ReadAll(ir.Body)
 	if string(body) != "Show: 123" {
 		t.Fatal("Unexpected Response, expected 'Show: 123' got:", body)
+	}
+
+	ir, err = http.Get(s.URL + "/posts/123/asdf")
+	if err != nil {
+		t.Fatal("GET OtherItem (asdf):", err)
+	}
+	defer ir.Body.Close()
+	body, err = ioutil.ReadAll(ir.Body)
+	if string(body) != "asdf" {
+		t.Fatal("Unexpected Response, expected 'asdf' got:", body)
 	}
 
 }

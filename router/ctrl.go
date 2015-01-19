@@ -25,8 +25,10 @@ func (re RedirectError) Redirect(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, re.Location, re.Code)
 }
-
 func ctrlName(ctrl interface{}) string {
+	if adc, ok := ctrl.(autoDupeCtrl); ok {
+		return adc.Name()
+	}
 	return reflect.TypeOf(ctrl).Name()
 }
 
@@ -41,8 +43,6 @@ func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]strin
 		if sc, ok := ctrl.(contexter); ok {
 			sc.SetContext(map[string]interface{}{})
 		}
-	} else {
-		fmt.Println("No SetContext")
 	}
 	if l.PreFilter {
 		if pf, ok := ctrl.(prefilter); ok {
@@ -113,10 +113,49 @@ type DupableController interface {
 	Dupe() Controller
 }
 
+type nullCtrl struct{}
+
+func (nullCtrl) Path() string {
+	return ""
+}
+func (nullCtrl) Dupe() Controller {
+	return nullCtrl{}
+}
+func (nullCtrl) SetLogger(*log.Logger) {
+}
+func (nullCtrl) SetRequestData(http.ResponseWriter, *http.Request) {
+}
+func (nullCtrl) SetParams(map[string]string) {
+}
+
+type ctrlHF struct {
+	handler http.HandlerFunc
+	w       http.ResponseWriter
+	r       *http.Request
+}
+
+func (ctrlHF) Path() string {
+	return ""
+}
+func (c ctrlHF) Dupe() Controller {
+	return &ctrlHF{handler: c.handler}
+}
+func (ctrlHF) SetLogger(*log.Logger) {
+}
+func (c *ctrlHF) SetRequestData(w http.ResponseWriter, r *http.Request) {
+	c.w = w
+	c.r = r
+}
+func (ctrlHF) SetParams(map[string]string) {
+}
+
 type autoDupeCtrl struct {
 	Controller
 }
 
+func (adc autoDupeCtrl) Name() string {
+	return reflect.TypeOf(adc.Controller).Name()
+}
 func (adc autoDupeCtrl) Dupe() Controller {
 	rs := reflect.ValueOf(adc.Controller)
 	rt := reflect.TypeOf(adc.Controller)
@@ -142,7 +181,9 @@ func (adc autoDupeCtrl) Dupe() Controller {
 				rn.Elem().Field(i).Set(rs.Field(i))
 			}
 		default:
-			rn.Elem().Field(i).Set(rs.Field(i))
+			if rs.Field(i).IsValid() && rn.Elem().Field(i).CanSet() {
+				rn.Elem().Field(i).Set(rs.Field(i))
+			}
 		}
 	}
 	return rn.Interface().(Controller)
@@ -227,6 +268,10 @@ func (r ResetController) Create() Result {
 }
 func (r ResetController) Index() Result {
 	return NotFound{}
+}
+func (r ResetController) OtherBase(*SubRoute) {
+}
+func (r ResetController) OtherItem(*SubRoute) {
 }
 
 type beenReset interface {

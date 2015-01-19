@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -128,6 +129,12 @@ type createController interface {
 type indexController interface {
 	Index() Result
 }
+type otherBaseController interface {
+	OtherBase(*SubRoute)
+}
+type otherItemController interface {
+	OtherItem(sr *SubRoute)
+}
 
 func (sr *SubRoute) One(ctrl Controller) *SubRoute {
 	var dc DupableController
@@ -146,6 +153,8 @@ func (sr *SubRoute) One(ctrl Controller) *SubRoute {
 	sr.insertEdit(dc, ctrl, name+"/edit", "edit_"+urlname+"_path", false)
 	sr.insertUpdate(dc, ctrl, name, "update_"+urlname+"_path", false)
 	sr.insertDelete(dc, ctrl, name, "delete_"+urlname+"_path", false)
+	sr.insertOtherBase(dc, ctrl, urlname)
+	sr.insertOtherItem(dc, ctrl, name)
 
 	return &SubRoute{local: sr.local.InsertPath(name)}
 }
@@ -171,6 +180,9 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 	sr.insertNew(dc, ctrl, name+"/new", "new_"+urlname+"_path", false)
 	sr.insertCreate(dc, ctrl, name, "create_"+urlname+"_path", false)
 	sr.insertIndex(dc, ctrl, name, urlname+"_path", false)
+
+	sr.insertOtherBase(dc, ctrl, urlname)
+	sr.insertOtherItem(dc, ctrl, itemName)
 
 	return &SubRoute{local: sr.local.InsertPath(itemName)}
 }
@@ -382,4 +394,58 @@ func (sr *SubRoute) insertIndex(dctrl DupableController, ctrl Controller, name, 
 			)
 		}
 	}
+}
+
+func (sr *SubRoute) insertOtherBase(dctrl DupableController, ctrl Controller, name string) {
+	if oc, ok := ctrl.(otherBaseController); ok {
+		oc.OtherBase(&SubRoute{local: sr.local.InsertPath(name)})
+	}
+}
+func (sr *SubRoute) insertOtherItem(dctrl DupableController, ctrl Controller, name string) {
+	if oc, ok := ctrl.(otherItemController); ok {
+		oc.OtherItem(&SubRoute{local: sr.local.InsertPath(name)})
+	}
+}
+func (sr *SubRoute) Any(path string) Endpoint {
+	return Endpoint{path, "*", sr}
+}
+func (sr *SubRoute) Get(path string) Endpoint {
+	return Endpoint{path, "GET", sr}
+}
+func (sr *SubRoute) Post(path string) Endpoint {
+	return Endpoint{path, "POST", sr}
+}
+func (sr *SubRoute) Put(path string) Endpoint {
+	return Endpoint{path, "PUT", sr}
+}
+func (sr *SubRoute) Delete(path string) Endpoint {
+	return Endpoint{path, "DELETE", sr}
+}
+func (sr *SubRoute) Other(verb, path string) Endpoint {
+	return Endpoint{path, strings.ToUpper(verb), sr}
+}
+
+type Endpoint struct {
+	path     string
+	verb     string
+	location *SubRoute
+}
+
+func (e Endpoint) HandlerFunc(f http.HandlerFunc) {
+	e.location.local.Insert(
+		e.path,
+		Leaf{
+			Method: e.verb,
+			Ctrl:   &ctrlHF{handler: f},
+			Item:   false,
+			Action: "Custom",
+			Callable: func(ctrl Controller) Result {
+				if c, ok := ctrl.(*ctrlHF); ok {
+					c.handler(c.w, c.r)
+					return NothingResult{}
+				}
+				return NotFound{}
+			},
+		},
+	)
 }

@@ -33,8 +33,20 @@ func (r restCtrl) Hello() Result {
 	return Rendered{
 		Content: strings.NewReader("Hello: " + r.Params[":"+r.Loc+"id"]),
 	}
+}
+func (r restCtrl) Bye() Result {
+	return Rendered{
+		Content: strings.NewReader("Goodbye"),
+	}
 
 }
+func (r restCtrl) OtherBase(sr *SubRoute) {
+	sr.Get("all").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "all")
+	})
+	sr.Get("bye").Action("Bye")
+}
+
 func (r restCtrl) OtherItem(sr *SubRoute) {
 	sr.Get("asdf").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "asdf")
@@ -87,6 +99,26 @@ func TestRestControllers(t *testing.T) {
 	body, err = ioutil.ReadAll(ir.Body)
 	if string(body) != "Hello: 123" {
 		t.Fatal("Unexpected Response, expected 'Hello: 123' got:", body)
+	}
+
+	ir, err = http.Get(s.URL + "/posts/all")
+	if err != nil {
+		t.Fatal("GET OtherBase (all):", err)
+	}
+	defer ir.Body.Close()
+	body, err = ioutil.ReadAll(ir.Body)
+	if string(body) != "all" {
+		t.Fatal("Unexpected Response, expected 'all' got:", body)
+	}
+
+	ir, err = http.Get(s.URL + "/posts/bye")
+	if err != nil {
+		t.Fatal("GET OtherBase (bye):", err)
+	}
+	defer ir.Body.Close()
+	body, err = ioutil.ReadAll(ir.Body)
+	if string(body) != "Goodbye" {
+		t.Fatal("Unexpected Response, expected 'Goodbye' got:", body)
 	}
 
 }

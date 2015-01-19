@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -106,6 +107,7 @@ func (r *Router) RouteList() []RouteDesc {
 type SubRoute struct {
 	local *Branch
 	name  string
+	ctrl  DupableController
 }
 
 type showController interface {
@@ -398,12 +400,12 @@ func (sr *SubRoute) insertIndex(dctrl DupableController, ctrl Controller, name, 
 
 func (sr *SubRoute) insertOtherBase(dctrl DupableController, ctrl Controller, name string) {
 	if oc, ok := ctrl.(otherBaseController); ok {
-		oc.OtherBase(&SubRoute{local: sr.local.InsertPath(name)})
+		oc.OtherBase(&SubRoute{ctrl: dctrl, local: sr.local.InsertPath(name)})
 	}
 }
 func (sr *SubRoute) insertOtherItem(dctrl DupableController, ctrl Controller, name string) {
 	if oc, ok := ctrl.(otherItemController); ok {
-		oc.OtherItem(&SubRoute{local: sr.local.InsertPath(name)})
+		oc.OtherItem(&SubRoute{ctrl: dctrl, local: sr.local.InsertPath(name)})
 	}
 }
 func (sr *SubRoute) Any(path string) Endpoint {
@@ -443,6 +445,30 @@ func (e Endpoint) HandlerFunc(f http.HandlerFunc) {
 				if c, ok := ctrl.(*ctrlHF); ok {
 					c.handler(c.w, c.r)
 					return NothingResult{}
+				}
+				return NotFound{}
+			},
+		},
+	)
+}
+
+func (e Endpoint) Action(a string) {
+	e.location.local.Insert(
+		e.path,
+		Leaf{
+			Method: e.verb,
+			Ctrl:   e.location.ctrl,
+			Item:   false,
+			Action: a,
+			Callable: func(ctrl Controller) Result {
+				ac := reflect.ValueOf(ctrl).MethodByName(a)
+				if ac.IsValid() {
+					rr := ac.Call([]reflect.Value{})
+					if len(rr) == 1 {
+						if res, ok := rr[0].Interface().(Result); ok {
+							return res
+						}
+					}
 				}
 				return NotFound{}
 			},

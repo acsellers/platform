@@ -120,5 +120,4 @@ func TestRestControllers(t *testing.T) {
 	if string(body) != "Goodbye" {
 		t.Fatal("Unexpected Response, expected 'Goodbye' got:", body)
 	}
-
 }

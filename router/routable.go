@@ -194,207 +194,165 @@ func (sr *SubRoute) Namespace(name string) *SubRoute {
 }
 
 func (sr *SubRoute) insertShow(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if sc, ok := ctrl.(showController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("Show", fmt.Sprint(sc.Show))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "GET",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Show",
-					Callable: func(ctrl Controller) Result {
-						if sc, ok := ctrl.(showController); ok {
-							return sc.Show()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Show method")}
-					},
+	if _, ok := ctrl.(showController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "GET",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Show",
+				Callable: func(ctrl Controller) Result {
+					if sc, ok := ctrl.(showController); ok {
+						return sc.Show()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Show method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 
 func (sr *SubRoute) insertEdit(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if uc, ok := ctrl.(editController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("Edit", fmt.Sprint(uc.Edit))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "GET",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Edit",
-					Callable: func(ctrl Controller) Result {
-						if uc, ok := ctrl.(editController); ok {
-							return uc.Edit()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Edit method")}
-					},
+	if _, ok := ctrl.(editController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "GET",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Edit",
+				Callable: func(ctrl Controller) Result {
+					if uc, ok := ctrl.(editController); ok {
+						return uc.Edit()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Edit method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 
 func (sr *SubRoute) insertUpdate(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if uc, ok := ctrl.(updateController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("Update", fmt.Sprint(uc.Update))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "POST",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Update",
-					Callable: func(ctrl Controller) Result {
-						if uc, ok := ctrl.(updateController); ok {
-							return uc.Update()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Update method")}
-					},
+	if _, ok := ctrl.(updateController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "POST",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Update",
+				Callable: func(ctrl Controller) Result {
+					if uc, ok := ctrl.(updateController); ok {
+						return uc.Update()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Update method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 
 func (sr *SubRoute) insertNew(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if nc, ok := ctrl.(newController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("New", fmt.Sprint(nc.New))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "GET",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "New",
-					Callable: func(ctrl Controller) Result {
-						if nc, ok := ctrl.(newController); ok {
-							return nc.New()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing New method")}
-					},
+	if _, ok := ctrl.(newController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "GET",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "New",
+				Callable: func(ctrl Controller) Result {
+					if nc, ok := ctrl.(newController); ok {
+						return nc.New()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing New method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 
 func (sr *SubRoute) insertCreate(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if cc, ok := ctrl.(createController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("Create", fmt.Sprint(cc.Create))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "POST",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Create",
-					Callable: func(ctrl Controller) Result {
-						if cc, ok := ctrl.(createController); ok {
-							return cc.Create()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Create method")}
-					},
+	if _, ok := ctrl.(createController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "POST",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Create",
+				Callable: func(ctrl Controller) Result {
+					if cc, ok := ctrl.(createController); ok {
+						return cc.Create()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Create method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 
 func (sr *SubRoute) insertDelete(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if dc, ok := ctrl.(deleteController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("Delete", fmt.Sprint(dc.Delete))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "DELETE",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Delete",
-					Callable: func(ctrl Controller) Result {
-						if dc, ok := ctrl.(deleteController); ok {
-							return dc.Delete()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Delete method")}
-					},
+	if _, ok := ctrl.(deleteController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "DELETE",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Delete",
+				Callable: func(ctrl Controller) Result {
+					if dc, ok := ctrl.(deleteController); ok {
+						return dc.Delete()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Delete method")}
 				},
-			)
-			sr.local.Insert(
-				name+"/delete",
-				Leaf{
-					Method: "POST",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Delete",
-					Callable: func(ctrl Controller) Result {
-						if dc, ok := ctrl.(deleteController); ok {
-							return dc.Delete()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Delete method")}
-					},
+			},
+		)
+		sr.local.Insert(
+			name+"/delete",
+			Leaf{
+				Method: "POST",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Delete",
+				Callable: func(ctrl Controller) Result {
+					if dc, ok := ctrl.(deleteController); ok {
+						return dc.Delete()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Delete method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 
 func (sr *SubRoute) insertIndex(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if ic, ok := ctrl.(indexController); ok {
-		insert := true
-		if rc, ok := ctrl.(beenReset); ok {
-			insert = !rc.resetFunc("Index", fmt.Sprint(ic.Index))
-		}
-		if insert {
-			sr.local.Insert(
-				name,
-				Leaf{
-					Method: "GET",
-					Name:   urlname,
-					Ctrl:   dctrl,
-					Item:   item,
-					Action: "Index",
-					Callable: func(ctrl Controller) Result {
-						if ic, ok := ctrl.(indexController); ok {
-							return ic.Index()
-						}
-						return InternalError{fmt.Errorf("BUG: controller passed is missing Index method")}
-					},
+	if _, ok := ctrl.(indexController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Method: "GET",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "Index",
+				Callable: func(ctrl Controller) Result {
+					if ic, ok := ctrl.(indexController); ok {
+						return ic.Index()
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Index method")}
 				},
-			)
-		}
+			},
+		)
 	}
 }
 

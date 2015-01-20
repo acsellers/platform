@@ -84,6 +84,14 @@ func (r *Router) Namespace(name string) *SubRoute {
 	return sr.Namespace(name)
 }
 
+type Module interface {
+	Load(sr *SubRoute)
+}
+
+func (r *Router) Mount(m Module) {
+	m.Load(&SubRoute{local: r.Tree.Branch})
+}
+
 type RouteDesc struct {
 	Name   string
 	Method string
@@ -191,6 +199,10 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 
 func (sr *SubRoute) Namespace(name string) *SubRoute {
 	return &SubRoute{local: sr.local.InsertPath(name)}
+}
+
+func (sr *SubRoute) Mount(m Module) {
+	m.Load(sr)
 }
 
 func (sr *SubRoute) insertShow(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {

@@ -10,9 +10,17 @@ platform/router
 An inteface based restful router for Go. A new controller interface is created
 for each request, so you can save request specific variables on the controller,
 embed a mixin like LoggedInFilter into another controller, and various other 
-tasks. Currently the implementation is basic, like you cannot define non-restful
-routes through a nice API (since I haven't needed it yet), but I do have an idea
-of how to do it.
+tasks. You can define a Restful controller with the basic action, Index, Show, 
+New, Create, Edit, Update, Delete. You can define extra Item actions or Base actions.
+An Item action would be like /posts/123/share, while a Base action would be like
+/posts/search. Also you can define arbitrary actions on the router using common 
+actions like GET, POST, etc., then set the function to call to either be a controller
+function or HandlerFunc.
+
+In the near future, I need to work on more ways to have callable functions (like http.Handler),
+a ToJavascript option for the RouteList function, better RouteList names, StripPrefix code
+somewhere around Module Mounts, Params helpers, Format helpers (JSON, XML, HTML, JS).
+Still plenty of things to work on.
 
 platform/controllers
 --------------------

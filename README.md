@@ -16,6 +16,27 @@ tasks. Currently the implementation is basic, like you cannot define non-restful
 routes through a nice API (since I haven't needed it yet), but I do have an idea
 of how to do it.
 
+platform/controllers
+--------------------
+
+As I write applications using platform/router, I run across similar code. After a 
+few iterations of the same basic code, I extract the code out and put it in the
+controllers subpackage. Currently there are 3 controller-ish things in p/c.
+
+* ResetController - Embeddable struct to conflict with Restful actions on another
+embedded struct. Doesn't conflict with PreFilter or PreItem. More of a Proof of
+Concept than broadly useful.
+
+* RenderableCtrl - Alternative to router.BaseController that provides HTML Rendering
+using the multitemplate library.
+
+* AssetController - Serve the files out of a folder, will set Cache-Control if given
+a time.Duration. Uses http.ServeFile for the sending.
+
+* AssetModule - Allows you to serve up a "public" type folder with sub-folders for css,
+js, img, fonts, etc. quickly. It just builds AssetController instances as necessary.
+
+
 Future Packages
 ===============
 
@@ -38,10 +59,3 @@ would like to clean it up into a better library and get better documentation
 and features around it so it works better. It should also be usable for 
 compressing/concatenating css stylesheets automatically then.
 
-platform/controllers
---------------------
-
-I am writing some of the same code for each project using platform/router. It 
-would make sense to write some generalized versions of each of those and put
-those in a platform/controllers package. Things like AssetCtrl, SessionCtrl,
-LoggedInCtrl, maybe some Filters for embedding as well.

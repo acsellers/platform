@@ -14,7 +14,6 @@ import (
 type AssetModule struct {
 	AssetLocation string
 	MaxAge        time.Duration
-	AllowIndex    bool
 }
 
 func (am AssetModule) Load(sr *router.SubRoute) {

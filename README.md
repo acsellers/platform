@@ -2,9 +2,7 @@ Platform
 ========
 
 As I write simple libraries useful for web application development, I will
-add them to this repository once I feel satisfied with their API decisions.
-
-Currently, there is only one package under here, but I would like to add more.
+add them to this repository once I feel satisfied with the API.
 
 platform/router
 ---------------

@@ -24,6 +24,19 @@ func (r Rendered) String() string {
 	return "Rendered Data"
 }
 
+type String struct {
+	Content string
+	Status  int
+}
+
+func (r String) Execute(w http.ResponseWriter) {
+	io.WriteString(w, r.Content)
+}
+
+func (r String) String() string {
+	return "String Data"
+}
+
 type Redirect struct {
 	Request *http.Request
 	URL     string

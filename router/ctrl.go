@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+
+	"golang.org/x/net/websocket"
 )
 
 // RedirectError may be returned by PreFilter, PreItem or any
@@ -149,6 +151,13 @@ func (c *ctrlHF) SetRequestData(w http.ResponseWriter, r *http.Request) {
 func (ctrlHF) SetParams(map[string]string) {
 }
 
+func wshandler(wf WSHandlerFunc) func(http.ResponseWriter, *http.Request) {
+	h := websocket.Handler(wf)
+	return func(w http.ResponseWriter, r *http.Request) {
+		h.ServeHTTP(w, r)
+	}
+}
+
 type autoDupeCtrl struct {
 	Controller
 }
@@ -236,65 +245,15 @@ type RestfulController interface {
 	Edit() Result
 	Update() Result
 	Delete() Result
+	WSItem(*websocket.Conn)
 
 	// MultiCtrl only
 	New() Result
 	Create() Result
 	Index() Result
-}
+	WSBase(*websocket.Conn)
 
-type ResetController struct{}
-
-// SingleCtrl & MultiCtrl
-func (r ResetController) Show() Result {
-	return NotFound{}
-}
-func (r ResetController) Edit() Result {
-	return NotFound{}
-}
-func (r ResetController) Update() Result {
-	return NotFound{}
-}
-func (r ResetController) Delete() Result {
-	return NotFound{}
-}
-
-// MultiCtrl only
-func (r ResetController) New() Result {
-	return NotFound{}
-}
-func (r ResetController) Create() Result {
-	return NotFound{}
-}
-func (r ResetController) Index() Result {
-	return NotFound{}
-}
-func (r ResetController) OtherBase(*SubRoute) {
-}
-func (r ResetController) OtherItem(*SubRoute) {
-}
-
-type beenReset interface {
-	resetFunc(string, string) bool
-}
-
-// The reason resetController works, kind of a hack around func == func
-func (r ResetController) resetFunc(name, fp string) bool {
-	switch name {
-	case "Show":
-		return fp == fmt.Sprint(r.Show)
-	case "Edit":
-		return fp == fmt.Sprint(r.Edit)
-	case "Update":
-		return fp == fmt.Sprint(r.Update)
-	case "Delete":
-		return fp == fmt.Sprint(r.Delete)
-	case "New":
-		return fp == fmt.Sprint(r.New)
-	case "Create":
-		return fp == fmt.Sprint(r.Create)
-	case "Index":
-		return fp == fmt.Sprint(r.Index)
-	}
-	return false
+	// Extra Action Defintion functions
+	OtherBase(*SubRoute)
+	OtherItem(*SubRoute)
 }

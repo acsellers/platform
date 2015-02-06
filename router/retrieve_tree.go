@@ -193,6 +193,7 @@ func (rt RetrieveTree) ListLeaves() []Leaf {
 
 type Leaf struct {
 	Method               string
+	Scheme               string
 	Name                 string
 	Item                 bool
 	Action               string

@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"golang.org/x/net/websocket"
 )
 
 type Router struct {
@@ -43,7 +45,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, handler := range append(handlers, fallbacks...) {
-		if handler.Method != req.Method {
+		if handler.Method != req.Method && handler.Scheme != req.URL.Scheme {
 			reqLog.Printf("Skipping %s.%s due to incorrect method\n", ctrlName(handler.Ctrl), handler.Action)
 			continue
 		}
@@ -147,6 +149,12 @@ type otherBaseController interface {
 type otherItemController interface {
 	OtherItem(sr *SubRoute)
 }
+type wsItemController interface {
+	WSItem(*websocket.Conn)
+}
+type wsBaseController interface {
+	WSBase(*websocket.Conn)
+}
 
 func (sr *SubRoute) One(ctrl Controller) *SubRoute {
 	var dc DupableController
@@ -167,6 +175,7 @@ func (sr *SubRoute) One(ctrl Controller) *SubRoute {
 	sr.insertDelete(dc, ctrl, name, "delete_"+urlname+"_path", false)
 	sr.insertOtherBase(dc, ctrl, urlname)
 	sr.insertOtherItem(dc, ctrl, name)
+	sr.insertWSItem(dc, ctrl, name, urlname+"_path", false)
 
 	return &SubRoute{local: sr.local.InsertPath(name)}
 }
@@ -195,6 +204,8 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 
 	sr.insertOtherBase(dc, ctrl, urlname)
 	sr.insertOtherItem(dc, ctrl, itemName)
+	sr.insertWSBase(dc, ctrl, name, "ws_"+urlname+"_path", false)
+	sr.insertWSItem(dc, ctrl, itemName, "ws_item_"+urlname+"_path", true)
 
 	return &SubRoute{local: sr.local.InsertPath(itemName)}
 }
@@ -380,6 +391,55 @@ func (sr *SubRoute) insertOtherItem(dctrl DupableController, ctrl Controller, na
 		oc.OtherItem(&SubRoute{ctrl: dctrl, local: sr.local.InsertPath(name)})
 	}
 }
+
+func (sr *SubRoute) insertWSBase(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
+	if _, ok := ctrl.(wsBaseController); ok {
+		sr.local.Insert(
+			name,
+			Leaf{
+				Scheme: "ws",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "WSBase",
+				Callable: func(ctrl Controller) Result {
+					if ic, ok := ctrl.(wsBaseController); ok {
+						return &WSResult{
+							Handler: websocket.Handler(ic.WSBase),
+						}
+					}
+					return InternalError{fmt.Errorf("BUG: controller passed is missing WSBase method")}
+				},
+			},
+		)
+	}
+
+}
+
+func (sr *SubRoute) insertWSItem(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
+	if wsc, ok := ctrl.(wsItemController); ok {
+		fmt.Println(wsc.WSItem)
+		sr.local.Insert(
+			name,
+			Leaf{
+				Scheme: "ws",
+				Name:   urlname,
+				Ctrl:   dctrl,
+				Item:   item,
+				Action: "WSItem",
+				Callable: func(ctrl Controller) Result {
+					if ic, ok := ctrl.(wsItemController); ok {
+						return &WSResult{
+							Handler: websocket.Handler(ic.WSItem),
+						}
+					}
+
+					return InternalError{fmt.Errorf("BUG: controller passed is missing Show method")}
+				},
+			},
+		)
+	}
+}
 func (sr *SubRoute) Any(path string) Endpoint {
 	return Endpoint{path, "*", sr}
 }
@@ -397,6 +457,9 @@ func (sr *SubRoute) Delete(path string) Endpoint {
 }
 func (sr *SubRoute) Other(verb, path string) Endpoint {
 	return Endpoint{path, strings.ToUpper(verb), sr}
+}
+func (sr *SubRoute) WS(path string) WSEndpoint {
+	return WSEndpoint{path, sr}
 }
 
 type Endpoint struct {
@@ -447,3 +510,55 @@ func (e Endpoint) Action(a string) {
 		},
 	)
 }
+
+type WSEndpoint struct {
+	path     string
+	location *SubRoute
+}
+
+type WSHandlerFunc func(c *websocket.Conn)
+
+func (e WSEndpoint) WSHandlerFunc(f WSHandlerFunc) {
+	e.location.local.Insert(
+		e.path,
+		Leaf{
+			Scheme: "ws",
+			Ctrl:   &ctrlHF{handler: wshandler(f)},
+			Item:   false,
+			Action: "Custom",
+			Callable: func(ctrl Controller) Result {
+				if c, ok := ctrl.(*ctrlHF); ok {
+					c.handler(c.w, c.r)
+					return NothingResult{}
+				}
+				return NotFound{}
+			},
+		},
+	)
+}
+
+/*
+func (e WSEndpoint) Action(a string) {
+	e.location.local.Insert(
+		e.path,
+		Leaf{
+			Scheme: "ws",
+			Ctrl:   e.location.ctrl,
+			Item:   false,
+			Action: a,
+			Callable: func(ctrl Controller) Result {
+				ac := reflect.ValueOf(ctrl).MethodByName(a)
+				if ac.IsValid() {
+					rr := ac.Call([]reflect.Value{})
+					if len(rr) == 1 {
+						if res, ok := rr[0].Interface().(Result); ok {
+							return res
+						}
+					}
+				}
+				return NotFound{}
+			},
+		},
+	)
+}
+*/

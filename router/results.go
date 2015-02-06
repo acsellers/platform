@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"golang.org/x/net/websocket"
 )
 
 type Result interface {
@@ -129,4 +131,20 @@ func (NotFound) Execute(http.ResponseWriter) {
 
 func (NotFound) String() string {
 	return "NotFound/NotApplicable"
+}
+
+type WSResult struct {
+	Handler websocket.Handler
+	Request *http.Request
+}
+
+func (ws *WSResult) SetRequest(r *http.Request) {
+	ws.Request = r
+}
+func (ws WSResult) Execute(w http.ResponseWriter) {
+	go ws.Handler.ServeHTTP(w, ws.Request)
+}
+
+func (WSResult) String() string {
+	return "Websocket Connection"
 }

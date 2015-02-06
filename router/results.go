@@ -7,6 +7,7 @@ import (
 )
 
 type Result interface {
+	SetRequest(*http.Request)
 	Execute(http.ResponseWriter)
 	String() string
 }
@@ -14,6 +15,9 @@ type Result interface {
 type Rendered struct {
 	Content io.Reader
 	Status  int
+}
+
+func (Rendered) SetRequest(*http.Request) {
 }
 
 func (r Rendered) Execute(w http.ResponseWriter) {
@@ -29,6 +33,8 @@ type String struct {
 	Status  int
 }
 
+func (String) SetRequest(*http.Request) {
+}
 func (r String) Execute(w http.ResponseWriter) {
 	io.WriteString(w, r.Content)
 }
@@ -43,6 +49,9 @@ type Redirect struct {
 	Status  int
 }
 
+func (r *Redirect) SetRequest(req *http.Request) {
+	r.Request = req
+}
 func (r Redirect) Execute(w http.ResponseWriter) {
 	if r.Status == 0 {
 		r.Status = 303
@@ -61,6 +70,9 @@ type NotAllowed struct {
 	Status   int
 }
 
+func (na *NotAllowed) SetRequest(req *http.Request) {
+	na.Request = req
+}
 func (na NotAllowed) Execute(w http.ResponseWriter) {
 	if na.Fallback != "" {
 		if na.Status == 0 {
@@ -87,6 +99,8 @@ type InternalError struct {
 	Error error
 }
 
+func (InternalError) SetRequest(*http.Request) {
+}
 func (ie InternalError) Execute(w http.ResponseWriter) {
 	io.WriteString(w, "<h1>Internal Server Error</h1>")
 }
@@ -97,6 +111,8 @@ func (ie InternalError) String() string {
 
 type NothingResult struct{}
 
+func (NothingResult) SetRequest(*http.Request) {
+}
 func (NothingResult) Execute(http.ResponseWriter) {
 }
 
@@ -106,6 +122,8 @@ func (NothingResult) String() string {
 
 type NotFound struct{}
 
+func (NotFound) SetRequest(*http.Request) {
+}
 func (NotFound) Execute(http.ResponseWriter) {
 }
 

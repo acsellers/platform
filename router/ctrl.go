@@ -69,9 +69,9 @@ func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]strin
 }
 
 type BaseController struct {
-	Out     http.ResponseWriter `dupe:"no"`
-	Request *http.Request       `dupe:"no"`
-	Log     *log.Logger         `dupe:"no"`
+	http.ResponseWriter `dupe:"no"`
+	Request             *http.Request `dupe:"no"`
+	Log                 *log.Logger   `dupe:"no"`
 	// The Cache is shared between all Controllers
 	Cache map[string]interface{}
 	// The Context will be a new map each request
@@ -81,7 +81,7 @@ type BaseController struct {
 }
 
 func (bc *BaseController) SetRequestData(w http.ResponseWriter, r *http.Request) {
-	bc.Out = w
+	bc.ResponseWriter = w
 	bc.Request = r
 }
 

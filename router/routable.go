@@ -54,6 +54,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				reqLog.Println("Aborting current handler, starting next handler")
 				continue
 			}
+			res.SetRequest(req)
 			res.Execute(w)
 			reqLog.Println(res)
 			return
@@ -62,6 +63,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if res == nil {
 			return
 		}
+		res.SetRequest(req)
 		res.Execute(w)
 		reqLog.Println(res)
 		return

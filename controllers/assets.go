@@ -53,11 +53,11 @@ func (ac AssetController) Show() router.Result {
 		return router.NotFound{}
 	}
 	if ac.MaxAge.Seconds() != 0.0 {
-		ac.Out.Header().Set(
+		ac.ResponseWriter.Header().Set(
 			"Cache-Control",
 			fmt.Sprintf("max-age=%.f", ac.MaxAge.Seconds()),
 		)
 	}
-	http.ServeFile(ac.Out, ac.Request, fn)
+	http.ServeFile(ac.ResponseWriter, ac.Request, fn)
 	return router.NothingResult{}
 }

@@ -16,7 +16,6 @@ import (
 
 type Router struct {
 	Tree      *RetrieveTree
-	BadRoute  http.HandlerFunc
 	cache     map[string]interface{}
 	OnError   func(error, http.ResponseWriter, *http.Request, Controller)
 	LogOutput io.Writer
@@ -90,9 +89,23 @@ func (r *Router) Many(ctrl Controller) *SubRoute {
 	return sr.Many(ctrl)
 }
 
+// Namespace creates a
 func (r *Router) Namespace(name string) *SubRoute {
 	sr := SubRoute{local: r.Tree.Branch}
 	return sr.Namespace(name)
+}
+
+// SetHandler sets an http.Handler to be called when there isn't a match
+// for other SubRoutes. This is the base handler, best used for a top-level
+// 404 Handler.
+func (r *Router) SetHandler(h http.Handler) {
+	r.Tree.Branch.Fallback = h
+}
+
+func (r *Router) PrefixHandler(prefix string, h http.Handler) *SubRoute {
+	sr := r.NameSpace(prefix)
+	sr.SetHandler(h)
+	return sr
 }
 
 type Module interface {
@@ -446,6 +459,10 @@ func (sr *SubRoute) insertWSItem(dctrl DupableController, ctrl Controller, name,
 			},
 		)
 	}
+}
+
+func (sr *SubRoute) SetHandler(h http.Handler) {
+	sr.local.Fallback = h
 }
 func (sr *SubRoute) Any(path string) Endpoint {
 	return Endpoint{path, "*", sr}

@@ -13,38 +13,38 @@ func TestRetrieveTree(t *testing.T) {
 	rt.Insert("/users/:usersid", Leaf{Name: "users_delete_path"})
 	rt.Insert("/users", Leaf{Name: "users_index_path"})
 	rt.Insert("/users", Leaf{Name: "users_create_path"})
-	results, _ := rt.Retrieve("/users/123/edit")
-	if len(results) != 1 {
+	results := rt.Retrieve("/users/123/edit")
+	if len(results.Primary) != 1 {
 		t.Fatal("Could not retrieve edit path")
 	}
 
-	results, _ = rt.Retrieve("/users/nerd")
-	if len(results) != 3 {
+	results = rt.Retrieve("/users/nerd")
+	if len(results.Primary) != 3 {
 		t.Fatal("Could not retrieve user path")
 	}
 	rt.Insert("/users/nerd", Leaf{Name: "users_nerd_category_path"})
-	results, _ = rt.Retrieve("/users/nerd")
-	if len(results) != 1 {
+	results = rt.Retrieve("/users/nerd")
+	if len(results.Primary) != 1 {
 		t.Fatal("Could not retrieve user path")
 	}
-	primary, secondary, _ := rt.RetrieveWithFallback("/users/nerd")
-	if len(primary) != 1 || len(secondary) != 3 {
+	results = rt.RetrieveWithFallback("/users/nerd")
+	if len(results.Primary) != 1 || len(results.Secondary) != 3 {
 		t.Fatal("Could not retrieve users path")
 	}
-	primary, secondary, _ = rt.RetrieveWithFallback("/users/321/edit")
-	if len(primary) != 1 || len(secondary) != 0 {
+	results = rt.RetrieveWithFallback("/users/321/edit")
+	if len(results.Primary) != 1 || len(results.Secondary) != 0 {
 		t.Fatal("Could not retrieve users edit path")
 	}
-	primary, secondary, _ = rt.RetrieveWithFallback("/users/nerd/edit")
-	if len(primary) != 1 || len(secondary) != 0 {
-		t.Fatal("Could not retrieve users edit for special path", primary, secondary)
+	results = rt.RetrieveWithFallback("/users/nerd/edit")
+	if len(results.Primary) != 1 || len(results.Secondary) != 0 {
+		t.Fatal("Could not retrieve users edit for special path", results.Primary, results.Secondary)
 	}
-	results, _ = rt.Retrieve("/users/")
-	if len(results) != 2 {
+	results = rt.Retrieve("/users/")
+	if len(results.Primary) != 2 {
 		t.Fatal("Could not retrieve users index path")
 	}
-	results, _ = rt.Retrieve("/users")
-	if len(results) != 2 {
+	results = rt.Retrieve("/users")
+	if len(results.Primary) != 2 {
 		t.Fatal("Could not retrieve users index path")
 	}
 }
@@ -109,32 +109,32 @@ func TestRouter(t *testing.T) {
 	if len(rl) != 7 {
 		t.Fatal("RouteList not correct:", r.RouteList())
 	}
-	results, _ := r.Tree.Retrieve("/bar/new")
-	if len(results) != 1 {
+	results := r.Tree.Retrieve("/bar/new")
+	if len(results.Primary) != 1 {
 		fmt.Println("Coundn't find new bar handler", results)
 		t.Fatal("RouteList doesn't have bar new")
 	}
 
-	results, _ = r.Tree.Retrieve("/bar/123/edit")
-	if len(results) != 1 {
+	results = r.Tree.Retrieve("/bar/123/edit")
+	if len(results.Primary) != 1 {
 		fmt.Println("Coundn't find edit bar handler", results)
 		t.Fatal("RouteList doesn't have bar edit")
 	}
-	results, _, _ = r.Tree.RetrieveWithFallback("/bar")
-	if len(results) != 2 {
+	results = r.Tree.RetrieveWithFallback("/bar")
+	if len(results.Primary) != 2 {
 		fmt.Println("Coundn't find index + create bar handler", results)
 		t.Fatal("RouteList doesn't have bar index + create")
 	}
 
-	results, _ = r.Tree.Retrieve("/foo")
-	if len(results) != 1 {
+	results = r.Tree.Retrieve("/foo")
+	if len(results.Primary) != 1 {
 		fmt.Println("Coundn't find show foohandler", results)
 		t.Fatal("RouteList doesn't have foo show")
 
 	}
 
-	results, _ = r.Tree.Retrieve("/bar/123/foo/afafa")
-	if len(results) != 1 {
+	results = r.Tree.Retrieve("/bar/123/foo/afafa")
+	if len(results.Primary) != 1 {
 		fmt.Println("Coundn't find show foohandler", results)
 		t.Fatal("RouteList doesn't have foo show")
 	}

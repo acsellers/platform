@@ -36,21 +36,25 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer io.Copy(r.LogOutput, logBuffer)
 	now := time.Now()
 
-	handlers, fallbacks, params := r.Tree.RetrieveWithFallback(req.URL.Path)
-	reqLog.Printf("%d Possible Handlers, %d Fallback Handlers", len(handlers), len(fallbacks))
-	if len(handlers) == 0 && len(fallbacks) == 0 {
-		reqLog.Println("Bad Route", req.URL.Path)
-		// r.BadRoute(w, req)
-		return
+	results := r.Tree.RetrieveWithFallback(req.URL.Path)
+	reqLog.Printf("%d Possible Handlers, %d Fallback Handlers", len(results.Primary), len(results.Secondary))
+	if len(results.Primary) == 0 && len(results.Secondary) == 0 {
+		if results.Fallback == nil {
+			reqLog.Println("Bad Route", req.URL.Path)
+			// r.BadRoute(w, req)
+			return
+		} else {
+			results.Fallback.ServeHTTP(w, req)
+		}
 	}
 
-	for _, handler := range append(handlers, fallbacks...) {
+	for _, handler := range append(results.Primary, results.Secondary...) {
 		if handler.Method != req.Method && handler.Scheme != req.URL.Scheme {
 			reqLog.Printf("Skipping %s.%s due to incorrect method\n", ctrlName(handler.Ctrl), handler.Action)
 			continue
 		}
 		// prepare
-		ctrl, res := callCtrl(w, req, handler, params, reqLog)
+		ctrl, res := callCtrl(w, req, handler, results.Params, reqLog)
 		if res != nil {
 			if _, ok := res.(NotFound); ok {
 				reqLog.Println("Aborting current handler, starting next handler")
@@ -59,17 +63,20 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			res.SetRequest(req)
 			res.Execute(w)
 			reqLog.Println(res)
+			reqLog.Printf("Completed request in %v\n", time.Since(now))
 			return
 		}
 		res = handler.Callable(ctrl)
 		if res == nil {
-			return
+			continue
 		}
 		res.SetRequest(req)
 		res.Execute(w)
 		reqLog.Println(res)
+		reqLog.Printf("Completed request in %v\n", time.Since(now))
 		return
 	}
+	results.Fallback.ServeHTTP(w, req)
 	reqLog.Printf("Completed request in %v\n", time.Since(now))
 }
 

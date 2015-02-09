@@ -1,17 +1,21 @@
 package router
 
-import "strings"
+import (
+	"net/http"
+	"strings"
+)
 
 type RetrieveTree struct {
 	*Branch
 }
 
 type Branch struct {
-	Static  map[string]*Branch
-	Name    string
-	Path    string
-	Dynamic *Branch
-	Leaves  []Leaf
+	Static   map[string]*Branch
+	Name     string
+	Path     string
+	Dynamic  *Branch
+	Fallback http.Handler
+	Leaves   []Leaf
 }
 
 func NewTree() *RetrieveTree {
@@ -26,38 +30,54 @@ func (rt *RetrieveTree) Insert(path string, item Leaf) *Branch {
 	return rt.Branch.Insert(path, item)
 }
 
-func (rt RetrieveTree) Retrieve(path string) ([]Leaf, map[string]string) {
+type Matches struct {
+	Primary   []Leaf
+	Secondary []Leaf
+	Fallback  http.Handler
+	Params    map[string]string
+}
+
+func (rt RetrieveTree) Retrieve(path string) Matches {
+	r := Matches{
+		Params: map[string]string{},
+	}
 	if rt.Branch == nil {
-		return []Leaf{}, nil
+		return r
 	}
 
 	splits := strings.Split(path, "/")
 	current := rt.Branch
-	params := map[string]string{}
 	for _, split := range splits {
 		if split == "" {
 			continue
 		}
+
+		if current.Fallback != nil {
+			r.Fallback = current.Fallback
+		}
 		if current.Static == nil && current.Dynamic == nil {
-			return []Leaf{}, nil
+			return r
 		}
 
 		if br, ok := current.Static[split]; ok {
 			current = br
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
-			params[current.Name] = split
+			r.Params[current.Name] = split
 		} else {
-			return []Leaf{}, nil
+			return r
 		}
 	}
-	return current.Leaves, params
+	r.Primary = current.Leaves
+	return r
 }
 
-func (rt RetrieveTree) RetrieveWithFallback(path string) ([]Leaf, []Leaf, map[string]string) {
-	params := map[string]string{}
+func (rt RetrieveTree) RetrieveWithFallback(path string) Matches {
+	r := Matches{
+		Params: map[string]string{},
+	}
 	if rt.Branch == nil {
-		return []Leaf{}, []Leaf{}, params
+		return r
 	}
 
 	splits := strings.Split(path, "/")
@@ -69,49 +89,52 @@ func (rt RetrieveTree) RetrieveWithFallback(path string) ([]Leaf, []Leaf, map[st
 			continue
 		}
 		if current.Static == nil && current.Dynamic == nil && backtrack == nil {
-			return []Leaf{}, []Leaf{}, params
+			return r
 		}
 
+		if current.Fallback != nil {
+			r.Fallback = current.Fallback
+		}
 		if br, ok := current.Static[split]; ok {
 			current = br
 			if current.Dynamic != nil {
 				backtrack = current.Dynamic
-				params["backtrack_value"] = split
+				r.Params["backtrack_value"] = split
 			}
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
-			params[current.Name] = split
+			r.Params[current.Name] = split
 			backtrack = nil
-			delete(params, "backtrack_value")
+			delete(r.Params, "backtrack_value")
 
 		} else if backtrack != nil {
-			params[backtrack.Name] = params["backtrack_value"]
-			delete(params, "backtrack_value")
+			r.Params[backtrack.Name] = r.Params["backtrack_value"]
+			delete(r.Params, "backtrack_value")
 
 			if br, ok := backtrack.Static[split]; ok {
 				current = br
 				if backtrack.Dynamic != nil {
 					backtrack = backtrack.Dynamic
-					params["backtrack_value"] = split
+					r.Params["backtrack_value"] = split
 				} else {
 					backtrack = nil
 				}
 			} else if backtrack.Dynamic != nil {
 				current = backtrack.Dynamic
 				backtrack = nil
-				delete(params, "backtrack_value")
+				delete(r.Params, "backtrack_value")
 			} else {
-				return []Leaf{}, []Leaf{}, params
+				return r
 			}
 		} else {
-			return []Leaf{}, []Leaf{}, params
+			return r
 		}
 	}
+	r.Primary = current.Leaves
 	if backtrack != nil {
-		return current.Leaves, backtrack.Leaves, params
-	} else {
-		return current.Leaves, []Leaf{}, params
+		r.Secondary = backtrack.Leaves
 	}
+	return r
 }
 func (b *Branch) InsertPath(path string) *Branch {
 	splits := strings.Split(path, "/")

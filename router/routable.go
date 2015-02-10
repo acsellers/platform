@@ -103,7 +103,7 @@ func (r *Router) SetHandler(h http.Handler) {
 }
 
 func (r *Router) PrefixHandler(prefix string, h http.Handler) *SubRoute {
-	sr := r.NameSpace(prefix)
+	sr := r.Namespace(prefix)
 	sr.SetHandler(h)
 	return sr
 }
@@ -449,7 +449,7 @@ func (sr *SubRoute) insertWSItem(dctrl DupableController, ctrl Controller, name,
 				Action: "WSItem",
 				Callable: func(ctrl Controller) Result {
 					if ic, ok := ctrl.(wsItemController); ok {
-						return &WSResult{
+						return &UniqueHandler{
 							Handler: websocket.Handler(ic.WSItem),
 						}
 					}
@@ -561,7 +561,6 @@ func (e WSEndpoint) WSHandlerFunc(f WSHandlerFunc) {
 	)
 }
 
-/*
 func (e WSEndpoint) Action(a string) {
 	e.location.local.Insert(
 		e.path,
@@ -573,10 +572,9 @@ func (e WSEndpoint) Action(a string) {
 			Callable: func(ctrl Controller) Result {
 				ac := reflect.ValueOf(ctrl).MethodByName(a)
 				if ac.IsValid() {
-					rr := ac.Call([]reflect.Value{})
-					if len(rr) == 1 {
-						if res, ok := rr[0].Interface().(Result); ok {
-							return res
+					if wh, ok := ac.Interface().(func(*websocket.Conn)); ok {
+						return &WSResult{
+							Handler: wh,
 						}
 					}
 				}
@@ -585,4 +583,3 @@ func (e WSEndpoint) Action(a string) {
 		},
 	)
 }
-*/

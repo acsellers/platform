@@ -135,16 +135,33 @@ func (NotFound) String() string {
 
 type WSResult struct {
 	Handler websocket.Handler
-	Request *http.Request
+	request *http.Request
 }
 
 func (ws *WSResult) SetRequest(r *http.Request) {
-	ws.Request = r
+	ws.request = r
 }
 func (ws WSResult) Execute(w http.ResponseWriter) {
-	go ws.Handler.ServeHTTP(w, ws.Request)
+	go ws.Handler.ServeHTTP(w, ws.request)
 }
 
 func (WSResult) String() string {
 	return "Websocket Connection"
+}
+
+type UniqueHandler struct {
+	Handler http.Handler
+	request *http.Request
+}
+
+func (uh *UniqueHandler) SetRequest(r *http.Request) {
+	uh.request = r
+}
+
+func (uh UniqueHandler) Execute(w http.ResponseWriter) {
+	go uh.Handler.ServeHTTP(w, uh.request)
+}
+
+func (UniqueHandler) String() string {
+	return "One-off Handler"
 }

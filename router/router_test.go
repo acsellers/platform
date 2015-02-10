@@ -2,7 +2,10 @@ package router
 
 import (
 	"fmt"
+	"io"
 	"testing"
+
+	"golang.org/x/net/websocket"
 )
 
 func TestRetrieveTree(t *testing.T) {
@@ -96,6 +99,11 @@ func (t t2Ctrl) Show() Result {
 	return nil
 }
 
+func (t t2Ctrl) WSBase(c *websocket.Conn) {
+	io.WriteString(c, "hello")
+	c.Close()
+}
+
 func (t t2Ctrl) Path() string {
 	return "bar"
 }
@@ -106,7 +114,7 @@ func TestRouter(t *testing.T) {
 	t2 := r.Many(t2Ctrl{})
 	t2.Many(t1Ctrl{})
 	rl := r.RouteList()
-	if len(rl) != 7 {
+	if len(rl) != 8 {
 		t.Fatal("RouteList not correct:", r.RouteList())
 	}
 	results := r.Tree.Retrieve("/bar/new")
@@ -121,7 +129,7 @@ func TestRouter(t *testing.T) {
 		t.Fatal("RouteList doesn't have bar edit")
 	}
 	results = r.Tree.RetrieveWithFallback("/bar")
-	if len(results.Primary) != 2 {
+	if len(results.Primary) != 3 {
 		fmt.Println("Coundn't find index + create bar handler", results)
 		t.Fatal("RouteList doesn't have bar index + create")
 	}

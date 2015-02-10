@@ -48,7 +48,13 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, handler := range append(results.Primary, results.Secondary...) {
-		if handler.Method != req.Method && handler.Scheme != req.URL.Scheme {
+		schemeMatch := false
+		if req.Header.Get("Upgrade") == "websocket" {
+			schemeMatch = handler.Scheme == "ws"
+		} else if handler.Scheme == "http" {
+			schemeMatch = true
+		}
+		if handler.Method != req.Method || !schemeMatch {
 			reqLog.Printf("Skipping %s.%s due to incorrect method\n", ctrlName(handler.Ctrl), handler.Action)
 			continue
 		}
@@ -75,7 +81,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		reqLog.Printf("Completed request in %v\n", time.Since(now))
 		return
 	}
-	results.Fallback.ServeHTTP(w, req)
+	if results.Fallback != nil {
+		results.Fallback.ServeHTTP(w, req)
+	} else {
+		http.NotFound(w, req)
+	}
 	reqLog.Printf("Completed request in %v\n", time.Since(now))
 }
 
@@ -244,6 +254,7 @@ func (sr *SubRoute) insertShow(dctrl DupableController, ctrl Controller, name, u
 			name,
 			Leaf{
 				Method: "GET",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -265,6 +276,7 @@ func (sr *SubRoute) insertEdit(dctrl DupableController, ctrl Controller, name, u
 			name,
 			Leaf{
 				Method: "GET",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -286,6 +298,7 @@ func (sr *SubRoute) insertUpdate(dctrl DupableController, ctrl Controller, name,
 			name,
 			Leaf{
 				Method: "POST",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -307,6 +320,7 @@ func (sr *SubRoute) insertNew(dctrl DupableController, ctrl Controller, name, ur
 			name,
 			Leaf{
 				Method: "GET",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -328,6 +342,7 @@ func (sr *SubRoute) insertCreate(dctrl DupableController, ctrl Controller, name,
 			name,
 			Leaf{
 				Method: "POST",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -349,6 +364,7 @@ func (sr *SubRoute) insertDelete(dctrl DupableController, ctrl Controller, name,
 			name,
 			Leaf{
 				Method: "DELETE",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -365,6 +381,7 @@ func (sr *SubRoute) insertDelete(dctrl DupableController, ctrl Controller, name,
 			name+"/delete",
 			Leaf{
 				Method: "POST",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -386,6 +403,7 @@ func (sr *SubRoute) insertIndex(dctrl DupableController, ctrl Controller, name, 
 			name,
 			Leaf{
 				Method: "GET",
+				Scheme: "http",
 				Name:   urlname,
 				Ctrl:   dctrl,
 				Item:   item,
@@ -417,6 +435,7 @@ func (sr *SubRoute) insertWSBase(dctrl DupableController, ctrl Controller, name,
 		sr.local.Insert(
 			name,
 			Leaf{
+				Method: "GET",
 				Scheme: "ws",
 				Name:   urlname,
 				Ctrl:   dctrl,
@@ -438,10 +457,10 @@ func (sr *SubRoute) insertWSBase(dctrl DupableController, ctrl Controller, name,
 
 func (sr *SubRoute) insertWSItem(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
 	if wsc, ok := ctrl.(wsItemController); ok {
-		fmt.Println(wsc.WSItem)
 		sr.local.Insert(
 			name,
 			Leaf{
+				Method: "GET",
 				Scheme: "ws",
 				Name:   urlname,
 				Ctrl:   dctrl,
@@ -497,6 +516,7 @@ func (e Endpoint) HandlerFunc(f http.HandlerFunc) {
 		e.path,
 		Leaf{
 			Method: e.verb,
+			Scheme: "http",
 			Ctrl:   &ctrlHF{handler: f},
 			Item:   false,
 			Action: "Custom",
@@ -516,6 +536,7 @@ func (e Endpoint) Action(a string) {
 		e.path,
 		Leaf{
 			Method: e.verb,
+			Scheme: "http",
 			Ctrl:   e.location.ctrl,
 			Item:   false,
 			Action: a,
@@ -565,6 +586,7 @@ func (e WSEndpoint) Action(a string) {
 	e.location.local.Insert(
 		e.path,
 		Leaf{
+			Method: "GET",
 			Scheme: "ws",
 			Ctrl:   e.location.ctrl,
 			Item:   false,

@@ -142,7 +142,7 @@ func (ws *WSResult) SetRequest(r *http.Request) {
 	ws.request = r
 }
 func (ws WSResult) Execute(w http.ResponseWriter) {
-	go ws.Handler.ServeHTTP(w, ws.request)
+	ws.Handler.ServeHTTP(w, ws.request)
 }
 
 func (WSResult) String() string {

@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"golang.org/x/net/websocket"
 )
 
 type restCtrl struct {
@@ -54,6 +56,11 @@ func (r restCtrl) OtherItem(sr *SubRoute) {
 	sr.Get("hello").Action("Hello")
 }
 
+func (r restCtrl) WSBase(c *websocket.Conn) {
+	io.WriteString(c, "hello")
+	c.Close()
+}
+
 func TestRestControllers(t *testing.T) {
 	r := NewRouter()
 	r.LogOutput = ioutil.Discard
@@ -68,7 +75,7 @@ func TestRestControllers(t *testing.T) {
 	defer ir.Body.Close()
 	body, err := ioutil.ReadAll(ir.Body)
 	if string(body) != "Index" {
-		t.Fatal("Unexpected Response, expected 'Index' got:", body)
+		t.Fatal("Unexpected Response, expected 'Index' got:", string(body))
 	}
 
 	ir, err = http.Get(s.URL + "/posts/123")
@@ -120,4 +127,12 @@ func TestRestControllers(t *testing.T) {
 	if string(body) != "Goodbye" {
 		t.Fatal("Unexpected Response, expected 'Goodbye' got:", body)
 	}
+
+	var wc *websocket.Conn
+	wc, err = websocket.Dial("ws"+s.URL[4:]+"/posts", "", "http://localhost/")
+	if err != nil {
+		t.Fatal("Websocket error:", err)
+	}
+	buf := make([]byte, 5)
+	wc.Close()
 }

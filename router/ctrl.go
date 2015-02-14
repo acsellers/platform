@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	"golang.org/x/net/websocket"
 )
@@ -101,6 +102,15 @@ func (bc *BaseController) SetContext(c map[string]interface{}) {
 
 func (bc *BaseController) SetID(p map[string]string) {
 	bc.ID = p
+}
+
+func (bc BaseController) IntID(name string) (int, bool) {
+	sv, ok := bc.ID[name]
+	if !ok {
+		return 0, false
+	}
+	iv, err := strconv.Atoi(sv)
+	return iv, err == nil
 }
 
 type Controller interface {

@@ -10,10 +10,10 @@ import (
 
 func TestRetrieveTree(t *testing.T) {
 	rt := NewTree()
-	rt.Insert("/users/:usersid/edit", Leaf{Name: "users_edit_path"})
-	rt.Insert("/users/:usersid", Leaf{Name: "users_show_path"})
-	rt.Insert("/users/:usersid", Leaf{Name: "users_update_path"})
-	rt.Insert("/users/:usersid", Leaf{Name: "users_delete_path"})
+	rt.Insert("/users/:users/edit", Leaf{Name: "users_edit_path"})
+	rt.Insert("/users/:users", Leaf{Name: "users_show_path"})
+	rt.Insert("/users/:users", Leaf{Name: "users_update_path"})
+	rt.Insert("/users/:users", Leaf{Name: "users_delete_path"})
 	rt.Insert("/users", Leaf{Name: "users_index_path"})
 	rt.Insert("/users", Leaf{Name: "users_create_path"})
 	results := rt.Retrieve("/users/123/edit")

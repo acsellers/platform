@@ -34,12 +34,12 @@ type Matches struct {
 	Primary   []Leaf
 	Secondary []Leaf
 	Fallback  http.Handler
-	Params    map[string]string
+	ID        map[string]string
 }
 
 func (rt RetrieveTree) Retrieve(path string) Matches {
 	r := Matches{
-		Params: map[string]string{},
+		ID: map[string]string{},
 	}
 	if rt.Branch == nil {
 		return r
@@ -63,7 +63,7 @@ func (rt RetrieveTree) Retrieve(path string) Matches {
 			current = br
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
-			r.Params[current.Name] = split
+			r.ID[current.Name] = split
 		} else {
 			return r
 		}
@@ -74,7 +74,7 @@ func (rt RetrieveTree) Retrieve(path string) Matches {
 
 func (rt RetrieveTree) RetrieveWithFallback(path string) Matches {
 	r := Matches{
-		Params: map[string]string{},
+		ID: map[string]string{},
 	}
 	if rt.Branch == nil {
 		return r
@@ -99,30 +99,30 @@ func (rt RetrieveTree) RetrieveWithFallback(path string) Matches {
 			current = br
 			if current.Dynamic != nil {
 				backtrack = current.Dynamic
-				r.Params["backtrack_value"] = split
+				r.ID["backtrack_value"] = split
 			}
 		} else if current.Dynamic != nil {
 			current = current.Dynamic
-			r.Params[current.Name] = split
+			r.ID[current.Name] = split
 			backtrack = nil
-			delete(r.Params, "backtrack_value")
+			delete(r.ID, "backtrack_value")
 
 		} else if backtrack != nil {
-			r.Params[backtrack.Name] = r.Params["backtrack_value"]
-			delete(r.Params, "backtrack_value")
+			r.ID[backtrack.Name] = r.ID["backtrack_value"]
+			delete(r.ID, "backtrack_value")
 
 			if br, ok := backtrack.Static[split]; ok {
 				current = br
 				if backtrack.Dynamic != nil {
 					backtrack = backtrack.Dynamic
-					r.Params["backtrack_value"] = split
+					r.ID["backtrack_value"] = split
 				} else {
 					backtrack = nil
 				}
 			} else if backtrack.Dynamic != nil {
 				current = backtrack.Dynamic
 				backtrack = nil
-				delete(r.Params, "backtrack_value")
+				delete(r.ID, "backtrack_value")
 			} else {
 				return r
 			}

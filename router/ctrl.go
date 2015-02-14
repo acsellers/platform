@@ -37,7 +37,7 @@ func ctrlName(ctrl interface{}) string {
 func callCtrl(w http.ResponseWriter, r *http.Request, l Leaf, p map[string]string, lg *log.Logger) (Controller, Result) {
 	ctrl := l.Ctrl.Dupe()
 	ctrl.SetRequestData(w, r)
-	ctrl.SetParams(p)
+	ctrl.SetID(p)
 	ctrl.SetLogger(lg)
 	name := ctrlName(ctrl)
 	lg.Printf("Starting request for %s using %s.%s\n", r.URL.String(), name, l.Action)
@@ -79,7 +79,7 @@ type BaseController struct {
 	// The Context will be a new map each request
 	Context map[string]interface{}
 	// URL Params
-	Params map[string]string
+	ID map[string]string
 }
 
 func (bc *BaseController) SetRequestData(w http.ResponseWriter, r *http.Request) {
@@ -99,14 +99,14 @@ func (bc *BaseController) SetContext(c map[string]interface{}) {
 	bc.Context = c
 }
 
-func (bc *BaseController) SetParams(p map[string]string) {
-	bc.Params = p
+func (bc *BaseController) SetID(p map[string]string) {
+	bc.ID = p
 }
 
 type Controller interface {
 	Path() string
 	SetRequestData(http.ResponseWriter, *http.Request)
-	SetParams(map[string]string)
+	SetID(map[string]string)
 	SetLogger(*log.Logger)
 }
 
@@ -127,7 +127,7 @@ func (nullCtrl) SetLogger(*log.Logger) {
 }
 func (nullCtrl) SetRequestData(http.ResponseWriter, *http.Request) {
 }
-func (nullCtrl) SetParams(map[string]string) {
+func (nullCtrl) SetID(map[string]string) {
 }
 
 type ctrlHF struct {
@@ -148,7 +148,7 @@ func (c *ctrlHF) SetRequestData(w http.ResponseWriter, r *http.Request) {
 	c.w = w
 	c.r = r
 }
-func (ctrlHF) SetParams(map[string]string) {
+func (ctrlHF) SetID(map[string]string) {
 }
 
 func wshandler(wf WSHandlerFunc) func(http.ResponseWriter, *http.Request) {

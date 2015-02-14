@@ -59,7 +59,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			continue
 		}
 		// prepare
-		ctrl, res := callCtrl(w, req, handler, results.Params, reqLog)
+		ctrl, res := callCtrl(w, req, handler, results.ID, reqLog)
 		if res != nil {
 			if _, ok := res.(NotFound); ok {
 				reqLog.Println("Aborting current handler, starting next handler")
@@ -456,7 +456,7 @@ func (sr *SubRoute) insertWSBase(dctrl DupableController, ctrl Controller, name,
 }
 
 func (sr *SubRoute) insertWSItem(dctrl DupableController, ctrl Controller, name, urlname string, item bool) {
-	if wsc, ok := ctrl.(wsItemController); ok {
+	if _, ok := ctrl.(wsItemController); ok {
 		sr.local.Insert(
 			name,
 			Leaf{

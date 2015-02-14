@@ -28,12 +28,12 @@ func (r restCtrl) Index() Result {
 
 func (r restCtrl) Show() Result {
 	return Rendered{
-		Content: strings.NewReader("Show: " + r.Params[":"+r.Loc+"id"]),
+		Content: strings.NewReader("Show: " + r.ID[":"+r.Loc+"id"]),
 	}
 }
 func (r restCtrl) Hello() Result {
 	return Rendered{
-		Content: strings.NewReader("Hello: " + r.Params[":"+r.Loc+"id"]),
+		Content: strings.NewReader("Hello: " + r.ID[":"+r.Loc+"id"]),
 	}
 }
 func (r restCtrl) Bye() Result {
@@ -133,6 +133,5 @@ func TestRestControllers(t *testing.T) {
 	if err != nil {
 		t.Fatal("Websocket error:", err)
 	}
-	buf := make([]byte, 5)
 	wc.Close()
 }

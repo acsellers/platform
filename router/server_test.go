@@ -28,12 +28,12 @@ func (r restCtrl) Index() Result {
 
 func (r restCtrl) Show() Result {
 	return Rendered{
-		Content: strings.NewReader("Show: " + r.ID[":"+r.Loc+"id"]),
+		Content: strings.NewReader("Show: " + r.ID[r.Loc]),
 	}
 }
 func (r restCtrl) Hello() Result {
 	return Rendered{
-		Content: strings.NewReader("Hello: " + r.ID[":"+r.Loc+"id"]),
+		Content: strings.NewReader("Hello: " + r.ID[r.Loc]),
 	}
 }
 func (r restCtrl) Bye() Result {
@@ -85,7 +85,7 @@ func TestRestControllers(t *testing.T) {
 	defer ir.Body.Close()
 	body, err = ioutil.ReadAll(ir.Body)
 	if string(body) != "Show: 123" {
-		t.Fatal("Unexpected Response, expected 'Show: 123' got:", body)
+		t.Fatal("Unexpected Response, expected 'Show: 123' got:", string(body))
 	}
 
 	ir, err = http.Get(s.URL + "/posts/123/asdf")

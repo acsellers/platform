@@ -149,7 +149,7 @@ func (b *Branch) InsertPath(path string) *Branch {
 		switch {
 		// Dynamic Option
 		case split[0] == ':' && current.Dynamic == nil:
-			current.Dynamic = &Branch{Name: split, Path: current.Path + "/" + split}
+			current.Dynamic = &Branch{Name: split[1:], Path: current.Path + "/" + split}
 			fallthrough
 		case split[0] == ':':
 			current = current.Dynamic

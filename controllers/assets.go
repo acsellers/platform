@@ -47,7 +47,7 @@ func (ac AssetController) Path() string {
 }
 
 func (ac AssetController) Show() router.Result {
-	fn := filepath.Join(ac.CtrlPath, ac.Params[":"+ac.Location+"id"])
+	fn := filepath.Join(ac.CtrlPath, ac.ID[ac.Location])
 	_, err := os.Stat(fn)
 	if err != nil {
 		return router.NotFound{}

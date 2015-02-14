@@ -217,7 +217,7 @@ func (sr *SubRoute) Many(ctrl Controller) *SubRoute {
 		dc = autoDupeCtrl{ctrl}
 	}
 	name := ctrl.Path()
-	itemName := fmt.Sprintf("%[1]s/:%[1]sid", name)
+	itemName := fmt.Sprintf("%[1]s/:%[1]s", name)
 	urlname := name
 	if len(sr.name) > 0 {
 		urlname = name + "_" + sr.name

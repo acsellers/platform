@@ -45,6 +45,10 @@ func (r String) String() string {
 	return "String Data"
 }
 
+func RedirectTo(location string) Result {
+	return &Redirect{URL: location}
+}
+
 type Redirect struct {
 	Request *http.Request
 	URL     string
@@ -63,6 +67,10 @@ func (r Redirect) Execute(w http.ResponseWriter) {
 
 func (r Redirect) String() string {
 	return fmt.Sprintf("Redirect To %s", r.URL)
+}
+
+func Disallow(location string) Result {
+	return &NotAllowed{Fallback: location}
 }
 
 type NotAllowed struct {

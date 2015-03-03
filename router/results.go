@@ -116,11 +116,15 @@ func (na NotAllowed) Execute(w http.ResponseWriter) {
 			na.Status = 302
 		}
 		http.Redirect(w, na.Request, na.Fallback, na.Status)
-	} else {
+	} else if na.Content != nil {
 		if na.Status != 0 {
 			w.WriteHeader(na.Status)
 		}
 		io.Copy(w, na.Content)
+	} else if na.Status != 0 {
+		w.WriteHeader(na.Status)
+	} else {
+		w.WriteHeader(403)
 	}
 }
 

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,11 +24,37 @@ func (Rendered) SetRequest(*http.Request) {
 }
 
 func (r Rendered) Execute(w http.ResponseWriter) {
+	if r.Status != 0 {
+		w.WriteHeader(r.Status)
+	}
 	io.Copy(w, r.Content)
 }
 
 func (r Rendered) String() string {
 	return "Rendered Data"
+}
+
+func JSON(data interface{}) Result {
+	return JSONData{Data: data}
+}
+
+type JSONData struct {
+	Data   interface{}
+	Status int
+}
+
+func (JSONData) SetRequest(*http.Request) {
+}
+
+func (r JSONData) Execute(w http.ResponseWriter) {
+	if r.Status != 0 {
+		w.WriteHeader(r.Status)
+	}
+	json.NewEncoder(w).Encode(r.Data)
+}
+
+func (r JSONData) String() string {
+	return "JSON Data"
 }
 
 type String struct {

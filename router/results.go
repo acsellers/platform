@@ -57,6 +57,33 @@ func (r JSONData) String() string {
 	return "JSON Data"
 }
 
+func JSONP(data interface{}) Result {
+	return &JSONPData{Data: data}
+}
+
+type JSONPData struct {
+	Data    interface{}
+	Status  int
+	Request *http.Request
+}
+
+func (r *JSONPData) SetRequest(req *http.Request) {
+	r.Request = req
+}
+
+func (r JSONPData) Execute(w http.ResponseWriter) {
+	if r.Status != 0 {
+		w.WriteHeader(r.Status)
+	}
+	io.WriteString(w, r.Request.URL.Query().Get("callback")+"(")
+	json.NewEncoder(w).Encode(r.Data)
+	io.WriteString(w, ")")
+}
+
+func (r JSONPData) String() string {
+	return "JSONP Data"
+}
+
 type String struct {
 	Content string
 	Status  int
